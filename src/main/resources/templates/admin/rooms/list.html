@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>더치페이 방 목록 - Podo Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-content-header">
+            <h2 class="admin-content-title">더치페이 방 목록</h2>
+            <div class="admin-filter-tabs">
+                <a th:href="@{/admin/rooms(keyword=${keyword})}"
+                   class="admin-filter-tab" th:classappend="${status == null} ? 'active'">전체</a>
+                <a th:href="@{/admin/rooms(status='IN_PROGRESS', keyword=${keyword})}"
+                   class="admin-filter-tab" th:classappend="${status?.name() == 'IN_PROGRESS'} ? 'active'">진행중</a>
+                <a th:href="@{/admin/rooms(status='COMPLETED', keyword=${keyword})}"
+                   class="admin-filter-tab" th:classappend="${status?.name() == 'COMPLETED'} ? 'active'">정산완료</a>
+            </div>
+        </div>
+
+        <form th:action="@{/admin/rooms}" method="get">
+            <input type="hidden" name="status" th:if="${status != null}" th:value="${status}">
+            <div class="admin-search-bar">
+                <input type="text" name="keyword" th:value="${keyword}" placeholder="방 제목 또는 방장 이름을 입력하세요">
+            </div>
+        </form>
+
+        <table class="admin-table">
+            <tr>
+                <th>방 번호</th><th>제목</th><th>방장</th><th>생성일</th>
+            </tr>
+            <tr th:each="room : ${rooms.content}">
+                <td th:text="${room.id}">1</td>
+                <td>
+                    <a th:href="@{/admin/rooms/{id}(id=${room.id})}" th:text="${room.title}" class="admin-table-link">제목</a>
+                </td>
+                <td th:text="|${room.ownerName} (${room.ownerLoginId})|">홍길동 (hong)</td>
+                <td th:text="${#temporals.format(room.createdAt, 'yyyy-MM-dd')}">2026-09-28</td>
+            </tr>
+            <tr th:if="${rooms.isEmpty()}">
+                <td colspan="4" class="admin-empty">해당하는 방이 없어요</td>
+            </tr>
+        </table>
+
+        <div class="admin-pagination" th:if="${rooms.totalPages > 1}">
+            <a th:each="i : ${#numbers.sequence(0, rooms.totalPages - 1)}"
+               th:href="@{/admin/rooms(page=${i}, status=${status}, keyword=${keyword})}"
+               th:text="${i + 1}"
+               th:classappend="${i == rooms.number} ? 'current'">1</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

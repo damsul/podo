@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 목록 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-content-header">
+      <h2 class="admin-content-title">관리자 목록</h2>
+      <div class="admin-header-actions">
+        <div class="admin-filter-tabs">
+          <a th:href="@{/admin/admins(keyword=${keyword})}"
+             class="admin-filter-tab" th:classappend="${deleted == null} ? 'active'">전체</a>
+          <a th:href="@{/admin/admins(deleted=false, keyword=${keyword})}"
+             class="admin-filter-tab" th:classappend="${deleted == false} ? 'active'">활성</a>
+          <a th:href="@{/admin/admins(deleted=true, keyword=${keyword})}"
+             class="admin-filter-tab" th:classappend="${deleted == true} ? 'active'">탈퇴</a>
+        </div>
+        <a th:href="@{/admin/admins/new}" class="admin-add-button">관리자 추가</a>
+      </div>
+    </div>
+
+    <form th:action="@{/admin/admins}" method="get">
+      <input type="hidden" name="deleted" th:if="${deleted != null}" th:value="${deleted}">
+      <div class="admin-search-bar">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="이름, 아이디 또는 이메일을 입력하세요">
+      </div>
+    </form>
+
+    <table class="admin-table admin-user-table">
+      <tr>
+        <th>번호</th><th>이름</th><th>아이디</th><th>이메일</th><th>권한</th><th>가입일</th><th>상태</th>
+      </tr>
+      <tr th:each="user : ${users.content}">
+        <td th:text="${user.id}">1</td>
+        <td>
+          <a th:href="@{/admin/admins/{id}(id=${user.id})}" th:text="${user.name}" class="admin-table-link">이름</a>
+        </td>
+        <td th:text="${#strings.isEmpty(user.loginId)} ? '-' : ${user.loginId}">hong</td>
+        <td th:text="${#strings.isEmpty(user.email)} ? '-' : ${user.email}">hong@example.com</td>
+        <td><span class="admin-status-badge role">관리자</span></td>
+        <td th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">2026-09-01</td>
+        <td>
+                    <span class="admin-status-badge"
+                          th:classappend="${user.deleted} ? 'withdrawn' : 'active'"
+                          th:text="${user.deleted} ? '탈퇴' : '활성'">활성</span>
+        </td>
+      </tr>
+      <tr th:if="${users.isEmpty()}">
+        <td colspan="7" class="admin-empty">해당하는 관리자가 없어요</td>
+      </tr>
+    </table>
+
+    <div class="admin-pagination" th:if="${users.totalPages > 1}">
+      <a th:each="i : ${#numbers.sequence(0, users.totalPages - 1)}"
+         th:href="@{/admin/admins(page=${i}, deleted=${deleted}, keyword=${keyword})}"
+         th:text="${i + 1}"
+         th:classappend="${i == users.number} ? 'current'">1</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

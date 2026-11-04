@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${notice.title} + ' - Podo'">공지사항 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/notice.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a href="/notices" class="back-link">← 공지사항으로</a>
+
+    <div class="notice-card">
+        <h2 class="notice-title" th:text="${notice.title}">공지 제목</h2>
+        <div class="notice-meta-row">
+            <span th:text="${#temporals.format(notice.createdAt, 'yyyy.MM.dd')}">2026.08.01</span>
+            <span th:text="'조회 ' + ${notice.viewCount}">조회 128</span>
+        </div>
+        <p class="notice-content" th:text="${notice.content}">본문 내용</p>
+    </div>
+</div>
+
+</body>
+</html>

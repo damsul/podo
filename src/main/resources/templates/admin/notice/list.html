@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공지사항 관리 - Podo Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-content-header">
+            <h2 class="admin-content-title">공지사항</h2>
+            <a href="/admin/notices/new" class="admin-add-button">+ 글 추가</a>
+        </div>
+
+        <form th:action="@{/admin/notices}" method="get">
+            <div class="admin-search-bar">
+                <input type="text" name="keyword" th:value="${keyword}" placeholder="제목 또는 내용을 입력하세요">
+            </div>
+        </form>
+
+        <table class="admin-table">
+            <tr>
+                <th>글 번호</th><th>제목</th><th>작성일</th><th class="col-right">관리</th>
+            </tr>
+            <tr th:each="notice : ${notices.content}">
+                <td th:text="${notice.id}">1</td>
+                <td><a th:href="@{/admin/notices/{id}/edit(id=${notice.id})}" th:text="${notice.title}" class="admin-table-link">제목</a></td>
+                <td th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
+                <td class="col-right">
+                    <a th:href="@{/admin/notices/{id}/edit(id=${notice.id})}">✏️</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

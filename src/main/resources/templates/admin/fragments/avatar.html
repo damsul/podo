@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="avatar(url)" class="admin-avatar">
+    <img th:if="${!#strings.isEmpty(url)}" th:src="${url}" alt="">
+    <svg th:if="${#strings.isEmpty(url)}" width="40" height="40" viewBox="0 0 24 24" fill="#b8a9d6">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8z"/>
+    </svg>
+</div>
+</body>
+</html>

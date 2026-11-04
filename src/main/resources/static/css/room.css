@@ -1,0 +1,21 @@
+.container {
+    max-width: 500px;
+    margin: 40px auto;
+}
+.form-card {
+    padding: 40px;
+}
+.form-title {
+    margin-bottom: 8px;
+}
+.form-subtitle {
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 30px;
+}
+.hint {
+    color: #999;
+    font-size: 12px;
+    font-weight: normal;
+    margin-left: 4px;
+}

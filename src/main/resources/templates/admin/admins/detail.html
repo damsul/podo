@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 상세 - Podo Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-content-header">
+            <h2 class="admin-content-title">관리자 상세</h2>
+            <div class="admin-form-actions">
+                <a th:href="@{/admin/admins}" class="admin-cancel-button">목록으로</a>
+                <a th:href="@{/admin/admins/{id}/edit(id=${user.id})}" class="admin-add-button">수정</a>
+            </div>
+        </div>
+        <div class="admin-form-divider"></div>
+
+        <div class="admin-card-wrap">
+            <div class="admin-card-title">기본정보</div>
+            <div class="admin-card">
+                <div th:replace="~{admin/fragments/avatar :: avatar(${user.profileImageUrl})}"></div>
+
+                <div class="admin-info-grid">
+                    <div>
+                        <div class="admin-info-label">이름</div>
+                        <div class="admin-info-value">
+                            <span th:text="${user.name}">이민욱</span>
+                            <span class="admin-status-badge me" th:if="${user.id == loginUserId}">나</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">아이디</div>
+                        <div class="admin-info-value"
+                             th:text="${#strings.isEmpty(user.loginId)} ? '-' : ${user.loginId}">minuk
+                        </div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">이메일</div>
+                        <div class="admin-info-value" th:text="${#strings.isEmpty(user.email)} ? '-' : ${user.email}">
+                            minuk@example.com
+                        </div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">권한</div>
+                        <div><span class="admin-status-badge role">관리자</span></div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">가입일</div>
+                        <div class="admin-info-value" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">
+                            2026-09-01
+                        </div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">상태</div>
+                        <div>
+              <span class="admin-status-badge"
+                    th:classappend="${user.deleted} ? 'withdrawn' : 'active'"
+                    th:text="${user.deleted} ? '탈퇴' : '활성'">활성</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card-title">권한 안내</div>
+            <div class="admin-card admin-card-compact">
+                <div class="admin-card-note">
+                    관리자 계정은 모든 관리 화면(회원·콘텐츠·고객센터)에 접근할 수 있어요.<br>
+                    로그인한 본인 계정에는 <b>나</b> 표시가 붙어요.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

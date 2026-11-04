@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<div th:fragment="header">
+    <div class="header">
+        <a href="/" class="logo">🍇 Podo</a>
+        <div class="header-right">
+            <div class="avatar-circle" onclick="toggleSidebar()"
+                 th:if="${#authentication != null and #authentication.principal != 'anonymousUser'}">
+                <img th:if="${#authentication.principal.user.profileImageUrl != null}"
+                     th:src="${#authentication.principal.user.profileImageUrl}"
+                     alt="프로필 사진">
+                <span th:unless="${#authentication.principal.user.profileImageUrl != null}"
+                      th:text="${#strings.substring(#authentication.principal.user.name, 0, 1)}">최</span>
+            </div>
+            <span class="menu-icon" onclick="toggleSidebar()"
+                  th:unless="${#authentication != null and #authentication.principal != 'anonymousUser'}">☰</span>
+        </div>
+    </div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div id="sidebar" class="sidebar-panel">
+        <div class="sidebar-close" onclick="closeSidebar()">✕</div>
+
+        <div th:if="${#authentication != null and #authentication.principal != 'anonymousUser'}" class="sidebar-profile">
+            <div class="sidebar-avatar">
+                <img th:if="${#authentication.principal.user.profileImageUrl != null}"
+                     th:src="${#authentication.principal.user.profileImageUrl}"
+                     alt="프로필 사진">
+                <span th:unless="${#authentication.principal.user.profileImageUrl != null}"
+                      th:text="${#strings.substring(#authentication.principal.user.name, 0, 1)}">최</span>
+            </div>
+            <div>
+                <div class="sidebar-name" th:text="${#authentication.principal.user.name}">최경환</div>
+                <div class="sidebar-login-id" th:text="${#authentication.principal.user.loginId}">pien</div>
+            </div>
+        </div>
+
+        <div th:if="${#authentication != null and #authentication.principal != 'anonymousUser'}">
+            <div class="sidebar-section-title">내 활동</div>
+            <a href="/mypage" class="sidebar-link">마이페이지</a>
+            <form th:action="@{/logout}" method="post" class="sidebar-logout-form">
+                <button type="submit" class="sidebar-link sidebar-logout-btn">로그아웃</button>
+            </form>
+        </div>
+
+        <div th:unless="${#authentication != null and #authentication.principal != 'anonymousUser'}">
+            <a href="/login" class="sidebar-link sidebar-login-highlight">로그인</a>
+        </div>
+        <div class="sidebar-section-title">고객센터</div>
+        <a href="/notices" class="sidebar-link">공지사항</a>
+        <a href="/faqs" class="sidebar-link">FAQ</a>
+        <a th:if="${#authentication != null and #authentication.principal != 'anonymousUser'}"
+           href="/inquiries" class="sidebar-link">1:1 문의</a>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('sidebarOverlay').classList.add('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+    </script>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>FAQ 관리 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-content-header">
+      <h2 class="admin-content-title">FAQ</h2>
+      <a href="/admin/faqs/new" class="admin-add-button">+ 글 추가</a>
+    </div>
+
+    <table class="admin-table">
+      <tr>
+        <th>번호</th><th>카테고리</th><th>질문</th><th class="col-right">관리</th>
+      </tr>
+      <tr th:each="faq : ${faqs}">
+        <td th:text="${faq.id}">1</td>
+        <td th:text="${faq.category.label}">카테고리</td>
+        <td>
+          <a th:href="@{/admin/faqs/{id}/edit(id=${faq.id})}" th:text="${faq.question}" class="admin-table-link">질문</a>
+        </td>
+        <td class="col-right">
+          <a th:href="@{/admin/faqs/{id}/edit(id=${faq.id})}">✏️</a>
+        </td>
+      </tr>
+
+      <tr th:if="${faqs.isEmpty()}">
+        <td colspan="4" class="admin-empty">등록된 FAQ가 없어요</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

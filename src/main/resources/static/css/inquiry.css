@@ -1,0 +1,273 @@
+.container {
+    max-width: 460px;
+}
+.inquiry-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.inquiry-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.inquiry-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+.write-button {
+    background: #6b4ea0;
+    color: white;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    text-decoration: none;
+    cursor: pointer;
+}
+.write-button:hover {
+    background-color: #5a3d8a;
+}
+.search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.search-row input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+.search-button {
+    background: #6b4ea0;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.search-button:hover {
+    background-color: #5a3d8a;
+}
+.inquiry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.inquiry-item {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+}
+.inquiry-item-title {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 4px;
+}
+.inquiry-item-date {
+    font-size: 12px;
+    color: #999;
+}
+.status-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.status-answered {
+    background: #ecf7ee;
+    color: #2e9c54;
+}
+.status-pending {
+    background: #f5f5f5;
+    color: #999;
+}
+.empty-inquiry {
+    text-align: center;
+    padding: 30px 0;
+    color: #aaa;
+    font-size: 14px;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+}
+.pagination a, .pagination span {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-decoration: none;
+    color: #555;
+}
+.pagination a:hover {
+    background-color: #f5f0fa;
+}
+.pagination .current {
+    background-color: #6b4ea0;
+    color: white;
+}
+
+/* 상세 화면 */
+.inquiry-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.inquiry-detail-title {
+    font-size: 17px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+.inquiry-meta-row {
+    font-size: 12px;
+    color: #999;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+}
+.inquiry-content {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.7;
+    white-space: pre-line;
+    margin: 0 0 20px;
+}
+.answer-box {
+    background: #faf8fd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.answer-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.answer-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b4ea0;
+}
+.answer-date {
+    font-size: 12px;
+    color: #999;
+}
+.answer-content {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-line;
+}
+.detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.edit-link {
+    background: #6b4ea0;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+}
+.edit-link:hover {
+    background-color: #5a3d8a;
+}
+.edit-disabled {
+    background: #f5f5f5;
+    color: #bbb;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: not-allowed;
+}
+
+/* 작성/수정 폼 */
+.inquiry-form-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin: 0 0 20px;
+}
+.inquiry-form label {
+    font-size: 12px;
+    color: #999;
+    display: block;
+    margin-bottom: 6px;
+}
+.inquiry-form input[type="text"],
+.inquiry-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+    font-family: inherit;
+}
+.inquiry-form textarea {
+    resize: vertical;
+}
+.inquiry-form-buttons {
+    display: flex;
+    gap: 8px;
+}
+.form-cancel-button {
+    flex: 1;
+    padding: 12px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #555;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+}
+.form-cancel-button:hover {
+    background-color: #f5f5f5;
+}
+.form-submit-button {
+    flex: 1;
+    padding: 12px;
+    background: #6b4ea0;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+.form-submit-button:hover {
+    background-color: #5a3d8a;
+}
+.edit-error {
+    margin-top: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    background-color: #fdecea;
+    color: #c0392b;
+}

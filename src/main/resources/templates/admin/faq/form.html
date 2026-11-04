@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>FAQ 등록 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-form-header">
+      <h2 class="admin-form-title">FAQ 등록</h2>
+      <div class="admin-form-actions">
+        <a href="/admin/faqs" class="admin-cancel-button">취소</a>
+        <button type="submit" form="faqCreateForm" class="admin-save-button">저장</button>
+      </div>
+    </div>
+    <div class="admin-form-divider"></div>
+
+    <form id="faqCreateForm" th:action="@{/admin/faqs}" th:object="${faqCreateRequest}" method="post">
+
+      <div class="admin-field-row">
+        <span class="admin-field-label">카테고리</span>
+        <div>
+          <select th:field="*{category}" class="admin-field-input">
+            <option th:each="c : ${T(com.podo.domain.cs.entity.FaqCategory).values()}"
+                    th:value="${c}" th:text="${c.label}">카테고리</option>
+          </select>
+          <div class="admin-field-error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}">오류</div>
+        </div>
+      </div>
+
+      <div class="admin-field-row align-start">
+        <span class="admin-field-label with-padding">질문</span>
+        <div>
+          <input type="text" th:field="*{question}" placeholder="질문을 입력해주세요" class="admin-field-input">
+          <div class="admin-field-error" th:if="${#fields.hasErrors('question')}" th:errors="*{question}">오류</div>
+        </div>
+      </div>
+
+      <div class="admin-field-row align-start">
+        <span class="admin-field-label with-padding">답변</span>
+        <div>
+          <textarea th:field="*{answer}" rows="6" placeholder="답변을 입력해주세요" class="admin-field-textarea"></textarea>
+          <div class="admin-field-error" th:if="${#fields.hasErrors('answer')}" th:errors="*{answer}">오류</div>
+        </div>
+      </div>
+
+      <div class="admin-field-row">
+        <span class="admin-field-label">노출 순서</span>
+        <div>
+            <input type="number" th:field="*{displayOrder}" class="admin-field-input" style="width:100px;">
+            <div class="admin-field-error" th:if="${#fields.hasErrors('displayOrder')}" th:errors="*{displayOrder}">오류</div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

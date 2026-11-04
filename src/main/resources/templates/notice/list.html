@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공지사항 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/notice.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← 홈으로</a>
+
+    <div class="notice-card">
+        <h2 class="notice-title">공지사항</h2>
+
+        <form th:action="@{/notices}" method="get" class="search-row">
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어를 입력하세요">
+            <button type="submit" class="search-button">검색</button>
+        </form>
+
+        <div class="notice-list" th:if="${!notices.isEmpty()}">
+            <a th:each="notice : ${notices.content}"
+               th:href="@{/notices/{id}(id=${notice.id})}"
+               class="notice-item"
+               th:classappend="${notice.pinned} ? 'pinned' : ''">
+                <div class="notice-item-title" th:text="${notice.title}">공지 제목</div>
+                <span class="notice-item-date" th:text="${#temporals.format(notice.createdAt, 'yyyy.MM.dd')}">2026.08.01</span>
+            </a>
+        </div>
+
+        <div class="empty-notice" th:if="${notices.isEmpty()}">
+            등록된 공지사항이 없어요
+        </div>
+
+        <div class="pagination" th:if="${notices.totalPages > 1}">
+            <a th:each="i : ${#numbers.sequence(0, notices.totalPages - 1)}"
+               th:href="@{/notices(page=${i}, keyword=${keyword})}"
+               th:text="${i + 1}"
+               th:class="${i == notices.number} ? 'current' : ''">1</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

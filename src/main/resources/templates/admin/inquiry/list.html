@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>1:1 문의 관리 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-content-header">
+      <h2 class="admin-content-title">1:1 문의</h2>
+      <div class="admin-filter-tabs">
+        <a th:href="@{/admin/inquiries(keyword=${keyword})}"
+           class="admin-filter-tab" th:classappend="${status == null} ? 'active'">전체</a>
+        <a th:href="@{/admin/inquiries(status='PENDING', keyword=${keyword})}"
+           class="admin-filter-tab" th:classappend="${status?.name() == 'PENDING'} ? 'active'">미응답</a>
+        <a th:href="@{/admin/inquiries(status='ANSWERED', keyword=${keyword})}"
+           class="admin-filter-tab" th:classappend="${status?.name() == 'ANSWERED'} ? 'active'">응답 완료</a>
+      </div>
+    </div>
+
+    <form th:action="@{/admin/inquiries}" method="get">
+      <input type="hidden" name="status" th:if="${status != null}" th:value="${status}">
+      <div class="admin-search-bar">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="제목을 입력하세요">
+      </div>
+    </form>
+
+    <table class="admin-table">
+      <tr>
+        <th>문의 번호</th><th>질문인</th><th>제목</th><th>등록일</th><th>답변 여부</th>
+      </tr>
+      <tr th:each="inquiry : ${inquiries.content}">
+        <td th:text="${inquiry.id}">1</td>
+        <td th:text="|${inquiry.writerName} (${inquiry.writerLoginId})|">홍길동 (hong)</td>
+        <td>
+          <a th:href="@{/admin/inquiries/{id}(id=${inquiry.id})}" th:text="${inquiry.title}" class="admin-table-link">제목</a>
+        </td>
+        <td th:text="${#temporals.format(inquiry.createdAt, 'yyyy-MM-dd')}">2026-09-28</td>
+        <td>
+          <span class="admin-status-badge"
+                th:classappend="${inquiry.answered} ? 'answered' : 'pending'"
+                th:text="${inquiry.answered} ? '답변완료' : '미응답'">미응답</span>
+        </td>
+      </tr>
+      <tr th:if="${inquiries.isEmpty()}">
+        <td colspan="5" class="admin-empty">해당하는 문의가 없어요</td>
+      </tr>
+    </table>
+
+    <div class="admin-pagination" th:if="${inquiries.totalPages > 1}">
+      <a th:each="i : ${#numbers.sequence(0, inquiries.totalPages - 1)}"
+         th:href="@{/admin/inquiries(page=${i}, status=${status}, keyword=${keyword})}"
+         th:text="${i + 1}"
+         th:classappend="${i == inquiries.number} ? 'current'">1</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

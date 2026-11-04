@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>FAQ 수정 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-form-header">
+      <h2 class="admin-form-title">FAQ 수정</h2>
+      <div class="admin-form-actions">
+        <a href="/admin/faqs" class="admin-cancel-button">취소</a>
+        <button type="submit" form="faqEditForm" class="admin-save-button">저장</button>
+      </div>
+    </div>
+    <div class="admin-form-divider"></div>
+
+    <form id="faqEditForm" th:action="@{/admin/faqs/{id}/edit(id=${faq.id})}" th:object="${faqUpdateRequest}" method="post">
+
+      <div class="admin-field-row">
+        <span class="admin-field-label">번호</span>
+        <span class="admin-field-value" th:text="${faq.id}">1</span>
+      </div>
+
+      <div class="admin-field-row">
+        <span class="admin-field-label">카테고리</span>
+        <div>
+          <select th:field="*{category}" class="admin-field-input">
+            <option th:each="c : ${T(com.podo.domain.cs.entity.FaqCategory).values()}"
+                    th:value="${c}" th:text="${c.label}">카테고리</option>
+          </select>
+          <div class="admin-field-error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}">오류</div>
+        </div>
+      </div>
+
+      <div class="admin-field-row align-start">
+        <span class="admin-field-label with-padding">질문</span>
+        <div>
+          <input type="text" th:field="*{question}" class="admin-field-input">
+          <div class="admin-field-error" th:if="${#fields.hasErrors('question')}" th:errors="*{question}">오류</div>
+        </div>
+      </div>
+
+      <div class="admin-field-row align-start">
+        <span class="admin-field-label with-padding">답변</span>
+        <div>
+          <textarea th:field="*{answer}" rows="6" class="admin-field-textarea"></textarea>
+          <div class="admin-field-error" th:if="${#fields.hasErrors('answer')}" th:errors="*{answer}">오류</div>
+        </div>
+      </div>
+
+      <div class="admin-field-row">
+        <span class="admin-field-label">노출 순서</span>
+        <input type="number" th:field="*{displayOrder}" class="admin-field-input" style="width:100px;">
+      </div>
+    </form>
+
+    <div class="admin-delete-row">
+      <form th:action="@{/admin/faqs/{id}/delete(id=${faq.id})}" method="post"
+            onsubmit="return confirm('이 FAQ를 삭제하시겠습니까?');" class="admin-delete-form">
+        <button type="submit" class="admin-delete-button">삭제</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

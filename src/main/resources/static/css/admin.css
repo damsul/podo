@@ -1,0 +1,714 @@
+/* ===== 디자인 토큰 ===== */
+:root {
+    --admin-color-primary: #6b4ea0;
+    --admin-color-primary-hover: #5a3d8a;
+    --admin-color-primary-light: #f5f0fa;
+    --admin-color-primary-soft: #ece7f5;
+
+    --admin-color-border: #ddd;
+    --admin-color-border-light: #eee;
+    --admin-color-border-lighter: #f5f5f5;
+
+    --admin-color-text-muted: #888;
+    --admin-color-text-secondary: #555;
+    --admin-color-text-tertiary: #999;
+    --admin-color-text-primary: #333;
+    --admin-color-text-dark: #222;
+    --admin-color-placeholder: #aaa;
+
+    --admin-color-bg-sidebar: #2b2438;
+    --admin-color-bg-sidebar-hover: #3d3450;
+    --admin-color-bg-sidebar-border: #443a54;
+    --admin-color-bg-subtle: #f5f5f7;
+
+    --admin-color-text-sidebar: #c9bcdb;
+    --admin-color-text-sidebar-sub: #a99bc2;
+    --admin-color-text-sidebar-muted: #8a7ba3;
+    --admin-color-text-sidebar-welcome: #d8cce8;
+
+    --admin-color-danger-bg: #fbeeef;
+    --admin-color-danger-text: #d6535e;
+    --admin-color-success-bg: #ecf7ee;
+    --admin-color-success-text: #2e9c54;
+
+    --admin-radius-sm: 6px;
+    --admin-radius-lg: 12px;
+    --admin-radius-pill: 24px;
+
+    --admin-font-xs: 11px;
+    --admin-font-sm: 12px;
+    --admin-font-base: 13px;
+    --admin-font-md: 14px;
+
+    /* 카드형 상세/폼 (사용자·관리자 관리) 용 */
+    --admin-color-surface: #fff;
+    --admin-color-text-label: #444;
+    --admin-color-text-hint: #8b93a1;
+    --admin-color-card-border: #e6e8ee;
+    --admin-color-input-border: #e4e7ee;
+    --admin-color-input-bg: #f8f9fb;
+    --admin-color-input-disabled-bg: #f1f2f5;
+    --admin-color-required: #e5484d;
+    --admin-radius-md: 8px;
+    --admin-radius-card: 16px;
+}
+
+/* ===== 전역 ===== */
+body {
+    margin: 0;
+    font-family: 'Apple SD Gothic Neo', sans-serif;
+}
+
+/* ===== 레이아웃 ===== */
+.admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+.admin-content {
+    flex: 1;
+    background: var(--admin-color-surface);
+    padding: 28px 32px;
+}
+
+/* ===== 사이드바 ===== */
+.admin-sidebar {
+    width: 220px;
+    background: var(--admin-color-bg-sidebar);
+    padding: 24px 20px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+.admin-logo {
+    font-size: 20px;
+    font-weight: 500;
+    color: white;
+}
+.admin-logo-sub {
+    font-size: var(--admin-font-sm);
+    color: var(--admin-color-text-sidebar-sub);
+    margin-bottom: 24px;
+}
+.admin-welcome {
+    font-size: var(--admin-font-sm);
+    color: var(--admin-color-text-sidebar-welcome);
+    padding: 10px 0;
+    border-top: 1px solid var(--admin-color-bg-sidebar-border);
+    border-bottom: 1px solid var(--admin-color-bg-sidebar-border);
+    margin-bottom: 16px;
+}
+.admin-nav-group-title {
+    font-size: var(--admin-font-xs);
+    color: var(--admin-color-text-sidebar-muted);
+    margin: 20px 0 8px;
+}
+.admin-nav-link {
+    display: block;
+    padding: 8px 10px;
+    border-radius: var(--admin-radius-sm);
+    color: var(--admin-color-text-sidebar);
+    font-size: var(--admin-font-base);
+    text-decoration: none;
+}
+.admin-nav-link:hover {
+    background: var(--admin-color-bg-sidebar-hover);
+}
+.admin-nav-link.active {
+    background: var(--admin-color-primary);
+    color: white;
+}
+.admin-logout-form {
+    margin-top: 32px;
+}
+.admin-logout-link {
+    background: none;
+    border: none;
+    color: var(--admin-color-text-sidebar);
+    font-size: var(--admin-font-base);
+    cursor: pointer;
+    padding: 8px 10px;
+    font-family: inherit;
+}
+
+/* ===== 목록 화면 ===== */
+.admin-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.admin-content-title {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0;
+}
+/* 주요(보라색) 버튼 공통: 크기/모양은 아래 각 클래스에서 지정 */
+.admin-add-button,
+.admin-save-button,
+.admin-primary-button {
+    background: var(--admin-color-primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.admin-add-button:hover,
+.admin-save-button:hover,
+.admin-primary-button:hover {
+    background-color: var(--admin-color-primary-hover);
+}
+/* 작은 버튼: 목록 헤더/상세 헤더/기존 폼 */
+.admin-add-button {
+    padding: 8px 18px;
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-base);
+    text-decoration: none;
+}
+
+.admin-table {
+    width: 100%;
+    font-size: var(--admin-font-base);
+    border-collapse: collapse;
+}
+.admin-table th {
+    color: var(--admin-color-text-tertiary);
+    text-align: left;
+    font-weight: normal;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--admin-color-border-light);
+}
+.admin-table td {
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--admin-color-border-lighter);
+}
+.admin-table .col-right {
+    text-align: right;
+}
+.admin-table-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* ===== 목록 필터/뱃지 (목록 화면 공용) ===== */
+.admin-filter-tabs {
+    display: flex;
+    gap: 6px;
+}
+.admin-filter-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--admin-color-border);
+    background: var(--admin-color-surface);
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-base);
+    color: var(--admin-color-text-secondary);
+    text-decoration: none;
+}
+.admin-filter-tab:hover {
+    background: var(--admin-color-primary-light);
+}
+.admin-filter-tab.active {
+    background: var(--admin-color-primary);
+    border-color: var(--admin-color-primary);
+    color: white;
+}
+.admin-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: var(--admin-font-xs);
+}
+.admin-status-badge.pending,
+.admin-status-badge.withdrawn {
+    background: var(--admin-color-danger-bg);
+    color: var(--admin-color-danger-text);
+}
+.admin-status-badge.answered,
+.admin-status-badge.active {
+    background: var(--admin-color-success-bg);
+    color: var(--admin-color-success-text);
+}
+.admin-status-badge.role,
+.admin-status-badge.me {
+    background: var(--admin-color-primary-soft);
+    color: var(--admin-color-primary);
+}
+.admin-status-badge.me {
+    margin-left: 6px;
+}
+.admin-empty {
+    text-align: center;
+    padding: 30px 0;
+    color: var(--admin-color-placeholder);
+}
+.admin-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 20px;
+}
+.admin-pagination a {
+    padding: 6px 10px;
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-base);
+    color: var(--admin-color-text-secondary);
+    text-decoration: none;
+}
+.admin-pagination a:hover {
+    background: var(--admin-color-primary-light);
+}
+.admin-pagination a.current {
+    background: var(--admin-color-primary);
+    color: white;
+}
+
+/* ===== 등록/수정 폼 화면 ===== */
+.admin-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.admin-form-title {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0;
+    color: var(--admin-color-text-dark);
+}
+.admin-form-actions {
+    display: flex;
+    gap: 8px;
+}
+/* 보조(테두리) 버튼 공통 */
+.admin-cancel-button,
+.admin-outline-button {
+    cursor: pointer;
+    text-decoration: none;
+}
+/* 작은 버튼 */
+.admin-cancel-button {
+    padding: 8px 20px;
+    border: 1px solid var(--admin-color-border);
+    background: var(--admin-color-surface);
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-base);
+    color: var(--admin-color-text-secondary);
+}
+.admin-save-button {
+    padding: 8px 20px;
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-base);
+}
+.admin-form-divider {
+    border-top: 2px solid var(--admin-color-primary);
+}
+.admin-field-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--admin-color-border-light);
+    align-items: center;
+}
+.admin-field-row.align-start {
+    align-items: start;
+}
+.admin-field-label {
+    font-size: var(--admin-font-base);
+    color: var(--admin-color-text-muted);
+}
+.admin-field-label.with-padding {
+    padding-top: 10px;
+}
+.admin-field-value {
+    font-size: var(--admin-font-md);
+    color: var(--admin-color-text-primary);
+}
+.admin-field-value.pre-wrap {
+    white-space: pre-line;
+    line-height: 1.6;
+}
+.admin-field-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--admin-color-border);
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-md);
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.admin-field-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--admin-color-border);
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-md);
+    box-sizing: border-box;
+    resize: vertical;
+    font-family: inherit;
+}
+.admin-field-error {
+    color: var(--admin-color-danger-text);
+    font-size: var(--admin-font-sm);
+    margin-top: 4px;
+}
+.admin-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--admin-font-base);
+    color: var(--admin-color-text-secondary);
+}
+.admin-delete-row {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 18px;
+}
+.admin-delete-form {
+    margin: 0;
+}
+.admin-delete-button {
+    background: var(--admin-color-danger-bg);
+    color: var(--admin-color-danger-text);
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-base);
+    cursor: pointer;
+}
+
+/* ===== 검색바 ===== */
+.admin-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--admin-color-bg-subtle);
+    border-radius: var(--admin-radius-pill);
+    padding: 12px 20px;
+    margin-bottom: 20px;
+}
+.admin-search-bar::before {
+    content: '';
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    background-color: var(--admin-color-text-tertiary);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat center / contain;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.admin-search-bar input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: var(--admin-font-md);
+    width: 100%;
+    font-family: inherit;
+    color: var(--admin-color-text-primary);
+}
+.admin-search-bar input::placeholder {
+    color: var(--admin-color-placeholder);
+}
+
+/* ===== 모달 ===== */
+.admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43, 36, 56, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+.admin-modal-overlay.open {
+    display: flex;
+}
+.admin-modal {
+    width: 520px;
+    max-height: 80vh;
+    background: var(--admin-color-surface);
+    border-radius: var(--admin-radius-lg);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.admin-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 26px 14px;
+    border-bottom: 2px solid var(--admin-color-primary);
+}
+.admin-modal-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 26px;
+}
+.admin-modal-close {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--admin-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--admin-color-text-tertiary);
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+.admin-modal-close:hover {
+    background: var(--admin-color-primary-light);
+}
+.admin-modal-body {
+    padding: 20px 26px 26px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.admin-modal-table {
+    width: 420px;
+    table-layout: fixed;
+}
+.admin-modal-table th:nth-child(1),
+.admin-modal-table td:nth-child(1) { width: 24%; }
+.admin-modal-table th:nth-child(2),
+.admin-modal-table td:nth-child(2) { width: 44%; }
+.admin-modal-table th:nth-child(3),
+.admin-modal-table td:nth-child(3) { width: 32%; padding-left: 20px; }
+.admin-table .col-center {
+    text-align: center;
+}
+.admin-result-button {
+    padding: 5px 12px;
+    border: 1px solid var(--admin-color-border);
+    border-radius: var(--admin-radius-sm);
+    font-size: var(--admin-font-sm);
+    color: var(--admin-color-text-secondary);
+    background: var(--admin-color-surface);
+    cursor: pointer;
+}
+.admin-result-button:hover {
+    background: var(--admin-color-primary-light);
+}
+
+.admin-section-title {
+    font-size: 15px;
+    font-weight: 500;
+    margin: 20px 0 10px;
+}
+.admin-section-title.sm {
+    font-size: 14px;
+}
+
+/* ===== 사용자/관리자 목록 테이블 (7열 고정) ===== */
+.admin-user-table {
+    table-layout: fixed;
+}
+.admin-user-table th:nth-child(1) { width: 7%; }
+.admin-user-table th:nth-child(2) { width: 12%; }
+.admin-user-table th:nth-child(3) { width: 16%; }
+.admin-user-table th:nth-child(4) { width: 29%; }
+.admin-user-table th:nth-child(5) { width: 12%; }
+.admin-user-table th:nth-child(6) { width: 14%; }
+.admin-user-table th:nth-child(7) { width: 10%; }
+.admin-user-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== 카드형 상세/폼 (사용자·관리자 관리) ===== */
+.admin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.admin-card-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+}
+.admin-card-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 28px 0 12px;
+}
+.admin-card {
+    border: 1px solid var(--admin-color-card-border);
+    border-radius: var(--admin-radius-card);
+    padding: 32px 36px;
+    background: var(--admin-color-surface);
+}
+.admin-card-compact {
+    padding: 22px 28px;
+}
+.admin-card-table {
+    padding: 8px 28px 12px;
+}
+.admin-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.admin-card-note {
+    font-size: var(--admin-font-base);
+    color: var(--admin-color-text-muted);
+}
+.admin-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+.admin-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--admin-color-primary-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 32px;
+    overflow: hidden;
+}
+.admin-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.admin-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px 32px;
+}
+.admin-info-label {
+    font-size: var(--admin-font-sm);
+    color: var(--admin-color-text-muted);
+    margin-bottom: 6px;
+}
+.admin-info-value {
+    font-size: 15px;
+}
+.admin-info-value.mask {
+    letter-spacing: 2px;
+}
+.admin-input-group {
+    margin-bottom: 22px;
+}
+.admin-input-group:last-child {
+    margin-bottom: 0;
+}
+.admin-input-label {
+    display: block;
+    font-size: var(--admin-font-base);
+    font-weight: 500;
+    color: var(--admin-color-text-label);
+    margin-bottom: 8px;
+}
+.admin-input-label .required {
+    color: var(--admin-color-required);
+}
+.admin-input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid var(--admin-color-input-border);
+    background: var(--admin-color-input-bg);
+    border-radius: var(--admin-radius-md);
+    font-size: 15px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.admin-input:focus {
+    outline: none;
+    border-color: var(--admin-color-primary);
+}
+.admin-input:disabled {
+    background: var(--admin-color-input-disabled-bg);
+    color: var(--admin-color-placeholder);
+}
+.admin-input-hint {
+    font-size: var(--admin-font-sm);
+    color: var(--admin-color-text-hint);
+    margin-top: 6px;
+}
+.admin-input-row {
+    display: flex;
+    gap: 10px;
+}
+.admin-input-row .admin-input {
+    flex: 1;
+    width: auto;
+}
+.admin-input-row .admin-outline-button {
+    padding: 0 20px;
+    white-space: nowrap;
+}
+/* 큰 버튼: 카드형 폼 */
+.admin-outline-button {
+    padding: 12px 26px;
+    border: 1px solid var(--admin-color-input-border);
+    background: var(--admin-color-input-bg);
+    border-radius: var(--admin-radius-md);
+    font-size: var(--admin-font-md);
+    font-weight: 600;
+    color: var(--admin-color-text-primary);
+    font-family: inherit;
+}
+/* 큰 버튼: 카드형 폼 */
+.admin-primary-button {
+    padding: 12px 30px;
+    border-radius: var(--admin-radius-md);
+    font-size: var(--admin-font-md);
+    font-weight: 600;
+    font-family: inherit;
+}
+.admin-notice {
+    background: var(--admin-color-success-bg);
+    color: var(--admin-color-success-text);
+    padding: 10px 14px;
+    border-radius: var(--admin-radius-md);
+    font-size: var(--admin-font-base);
+    margin-top: 20px;
+}
+.admin-modal.narrow {
+    width: 480px;
+}
+.admin-modal-body.stretch {
+    align-items: stretch;
+}
+
+/* ===== 중복확인 결과 ===== */
+.admin-check-result {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: var(--admin-font-sm);
+    font-weight: 600;
+    color: var(--check-color);
+}
+.admin-check-result:empty {
+    display: none;
+}
+.admin-check-result::before {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--check-color);
+    color: white;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+.admin-check-result.ok {
+    --check-color: var(--admin-color-success-text);
+}
+.admin-check-result.ok::before {
+    content: '✓';
+}
+.admin-check-result.error {
+    --check-color: var(--admin-color-danger-text);
+}
+.admin-check-result.error::before {
+    content: '✕';
+}

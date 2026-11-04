@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공지사항 수정 - Podo Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-form-header">
+            <h2 class="admin-form-title">공지사항 수정</h2>
+            <div class="admin-form-actions">
+                <a href="/admin/notices" class="admin-cancel-button">취소</a>
+                <button type="submit" form="noticeEditForm" class="admin-save-button">저장</button>
+            </div>
+        </div>
+        <div class="admin-form-divider"></div>
+
+        <form id="noticeEditForm" th:action="@{/admin/notices/{id}/edit(id=${notice.id})}" th:object="${noticeUpdateRequest}" method="post">
+
+            <div class="admin-field-row">
+                <span class="admin-field-label">글 번호</span>
+                <span class="admin-field-value" th:text="${notice.id}">1</span>
+            </div>
+
+            <div class="admin-field-row align-start">
+                <span class="admin-field-label with-padding">제목</span>
+                <div>
+                    <input type="text" th:field="*{title}" class="admin-field-input">
+                    <div class="admin-field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">오류</div>
+                </div>
+            </div>
+
+            <div class="admin-field-row align-start">
+                <span class="admin-field-label with-padding">내용</span>
+                <div>
+                    <textarea th:field="*{content}" rows="8" class="admin-field-textarea"></textarea>
+                    <div class="admin-field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}">오류</div>
+                </div>
+            </div>
+
+            <div class="admin-field-row">
+                <span class="admin-field-label">상단 고정</span>
+                <label class="admin-checkbox-label">
+                    <input type="checkbox" th:field="*{pinned}"> 목록 상단에 고정
+                </label>
+            </div>
+
+            <div class="admin-field-row">
+                <span class="admin-field-label">조회수</span>
+                <span class="admin-field-value" th:text="${notice.viewCount}">0</span>
+            </div>
+
+            <div class="admin-field-row">
+                <span class="admin-field-label">작성일</span>
+                <span class="admin-field-value" th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')}">2026-09-24</span>
+            </div>
+        </form>
+
+        <div class="admin-delete-row">
+            <form th:action="@{/admin/notices/{id}/delete(id=${notice.id})}" method="post"
+                  onsubmit="return confirm('이 공지사항을 삭제하시겠습니까?');" class="admin-delete-form">
+                <button type="submit" class="admin-delete-button">삭제</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

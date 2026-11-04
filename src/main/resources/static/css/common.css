@@ -1,0 +1,302 @@
+body {
+    font-family: 'Apple SD Gothic Neo', sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+}
+
+.header {
+    background-color: #6b4ea0;
+    color: white;
+    padding: 16px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header .logo {
+    font-size: 22px;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.logout-form {
+    margin: 0;
+}
+.logout-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.logout-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.container {
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.back-link {
+    color: #888;
+    font-size: 13px;
+    text-decoration: none;
+    margin-bottom: 12px;
+    display: inline-block;
+}
+.back-link:hover {
+    color: #6b4ea0;
+}
+
+.required {
+    color: #e74c3c;
+}
+
+.field-error {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    font-family: inherit;
+}
+input:focus,
+select:focus {
+    outline: none;
+    border-color: #6b4ea0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+.form-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.form-title {
+    color: #6b4ea0;
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+}
+.submit-button {
+    flex: 1;
+    padding: 12px;
+    background-color: #6b4ea0;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+}
+.submit-button:hover {
+    background-color: #5a3d8a;
+}
+.cancel-button {
+    flex: 1;
+    padding: 12px;
+    background-color: white;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+}
+.cancel-button:hover {
+    background-color: #f5f5f5;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.status-in-progress {
+    background-color: #eaf4ff;
+    color: #2e7ed6;
+}
+.status-completed {
+    background-color: #ecf7ee;
+    color: #2e9c54;
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.avatar-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 500;
+    font-size: 13px;
+    overflow: hidden;
+}
+.avatar-circle img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 500;
+    font-size: 13px;
+    overflow: hidden;
+    cursor: pointer;
+}
+.avatar-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 20;
+}
+.sidebar-overlay.open {
+    display: block;
+}
+
+.sidebar-panel {
+    position: fixed;
+    top: 0;
+    right: -260px;
+    width: 240px;
+    height: 100%;
+    background: white;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+    padding: 24px 20px;
+    box-sizing: border-box;
+    z-index: 21;
+    transition: right 0.2s ease;
+}
+.sidebar-panel.open {
+    right: 0;
+}
+.sidebar-close {
+    text-align: right;
+    color: #999;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.sidebar-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #f5f0fa;
+    color: #6b4ea0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.sidebar-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.sidebar-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+.sidebar-login-id {
+    font-size: 11px;
+    color: #999;
+}
+.sidebar-section-title {
+    font-size: 11px;
+    color: #aaa;
+    margin: 16px 0 6px;
+}
+.sidebar-link {
+    display: block;
+    font-size: 13px;
+    color: #444;
+    padding: 8px 0;
+    text-decoration: none;
+}
+.sidebar-link:hover {
+    color: #6b4ea0;
+}
+.sidebar-logout-form {
+    margin: 0;
+}
+.sidebar-logout-btn {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.menu-icon {
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.sidebar-login-highlight {
+    color: #6b4ea0;
+    font-weight: 500;
+}

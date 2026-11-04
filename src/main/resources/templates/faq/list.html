@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>FAQ - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/faq.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← 홈으로</a>
+
+    <div class="faq-card">
+        <h2 class="faq-title">자주 묻는 질문</h2>
+
+        <div class="category-tabs">
+            <button type="button" class="category-tab active" data-category="ALL" onclick="filterCategory('ALL')">전체</button>
+            <button type="button" class="category-tab" data-category="ACCOUNT" onclick="filterCategory('ACCOUNT')">회원/계정</button>
+            <button type="button" class="category-tab" data-category="PAYROOM" onclick="filterCategory('PAYROOM')">더치페이 방</button>
+            <button type="button" class="category-tab" data-category="PAYMENT" onclick="filterCategory('PAYMENT')">결제/정산</button>
+            <button type="button" class="category-tab" data-category="ETC" onclick="filterCategory('ETC')">기타</button>
+        </div>
+
+        <div class="faq-list" th:if="${!faqs.isEmpty()}">
+            <div th:each="faq : ${faqs}" class="faq-item" th:attr="data-category=${faq.category}">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <div class="faq-question-left">
+                        <span class="faq-badge" th:text="${faq.category.label}">카테고리</span>
+                        <span class="faq-question-text" th:text="${faq.question}">질문</span>
+                    </div>
+                    <span class="faq-chevron">›</span>
+                </div>
+                <div class="faq-answer" th:text="${faq.answer}">답변</div>
+            </div>
+        </div>
+
+        <div class="empty-faq" th:if="${faqs.isEmpty()}">
+            등록된 FAQ가 없어요
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFaq(el) {
+        const answer = el.nextElementSibling;
+        const chevron = el.querySelector('.faq-chevron');
+        const isOpen = answer.classList.contains('open');
+        answer.classList.toggle('open', !isOpen);
+        chevron.classList.toggle('open', !isOpen);
+    }
+
+    function filterCategory(category) {
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.category === category);
+        });
+        document.querySelectorAll('.faq-item').forEach(item => {
+            const match = category === 'ALL' || item.dataset.category === category;
+            item.style.display = match ? '' : 'none';
+        });
+    }
+</script>
+
+</body>
+</html>

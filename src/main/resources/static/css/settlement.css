@@ -1,0 +1,293 @@
+.container {
+    max-width: 700px;
+}
+.summary-card {
+    background: linear-gradient(135deg, #6b4ea0 0%, #8568b8 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+.summary-title {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+.summary-room {
+    font-size: 22px;
+    font-weight: bold;
+    margin: 0 0 16px 0;
+}
+.summary-total {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 0;
+}
+.summary-label {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 4px;
+}
+.payment-group {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+}
+.payment-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+.payment-name {
+    font-size: 17px;
+    font-weight: bold;
+    color: #333;
+}
+.per-person {
+    font-size: 13px;
+    color: #888;
+}
+.transfer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.transfer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background-color: #faf8fd;
+    border-radius: 8px;
+}
+.transfer-row.settled {
+    background-color: #ecf7ee;
+    opacity: 0.7;
+}
+.transfer-from-to {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #333;
+}
+.from-name {
+    font-weight: 500;
+}
+.arrow {
+    color: #6b4ea0;
+    font-weight: bold;
+}
+.to-name {
+    font-weight: 500;
+}
+.transfer-amount {
+    font-weight: bold;
+    color: #6b4ea0;
+    font-size: 15px;
+}
+.transfer-row.settled .transfer-amount {
+    color: #2e9c54;
+    text-decoration: line-through;
+}
+.settled-badge {
+    background-color: #2e9c54;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 6px;
+}
+.empty-state {
+    background: white;
+    padding: 60px 20px;
+    border-radius: 12px;
+    text-align: center;
+    color: #999;
+}
+.empty-icon {
+    font-size: 50px;
+    margin-bottom: 12px;
+}
+.transfer-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.toggle-form {
+    margin: 0;
+}
+.toggle-button {
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.toggle-settle {
+    background-color: #6b4ea0;
+    color: white;
+}
+.toggle-settle:hover {
+    background-color: #5a3d8a;
+}
+.toggle-unsettle {
+    background-color: white;
+    color: #888;
+    border: 1px solid #ccc;
+}
+.toggle-unsettle:hover {
+    background-color: #f5f5f5;
+    color: #555;
+}
+.toggle-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.share-button {
+    display: inline-block;
+    padding: 10px 28px;
+    background-color: #8568b8;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+.share-button:hover {
+    background-color: #6b4ea0;
+}
+.account-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+}
+.account-holder {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+}
+.account-bank-badge {
+    background: #f5f0fa;
+    color: #5a3d8a;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    transition: opacity 0.2s;
+}
+.account-detail {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: opacity 0.2s;
+}
+.account-number {
+    font-size: 14px;
+    color: #6b4ea0;
+    font-weight: 500;
+    cursor: pointer;
+}
+.copied-label {
+    font-size: 13px;
+    color: #2e9c54;
+    font-weight: 500;
+}
+.round-option-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.round-option-row span {
+    white-space: nowrap;
+}
+.round-label {
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+}
+.round-select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+.action-buttons-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.detail-button {
+    background-color: #fff;
+    color: #6b4ea0;
+    border: 1px solid #d4c5e7;
+}
+.hidden-textarea {
+    position: absolute;
+    left: -9999px;
+}
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 10;
+    align-items: center;
+    justify-content: center;
+}
+.modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.modal-title {
+    font-size: 17px;
+    font-weight: bold;
+}
+.modal-close {
+    cursor: pointer;
+    color: #888;
+}
+.detail-entry {
+    margin-bottom: 20px;
+}
+.detail-entry-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.detail-entry-title {
+    font-weight: bold;
+}
+.detail-per-person {
+    font-size: 13px;
+    color: #888;
+}
+.detail-transfer-row {
+    margin-bottom: 6px;
+}

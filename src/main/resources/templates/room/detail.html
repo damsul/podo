@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title th:text="${room.title} + ' - Podo'">페이방 - Podo</title>
+  <link rel="stylesheet" th:href="@{/css/common.css}"/>
+  <link rel="stylesheet" th:href="@{/css/payroom.css}"/>
+</head>
+<body>
+
+<!--
+<div class="header">
+  <a href="/" class="logo">🍇 Podo</a>
+  &lt;!&ndash; 로그아웃 &ndash;&gt;
+  <form th:action="@{/logout}" method="post" class="logout-form">
+    <button type="submit" class="logout-button">로그아웃</button>
+  </form>
+</div>
+-->
+
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+
+  <a href="/" class="back-link">← 내 페이방으로</a>
+
+  <!-- 방 정보 -->
+  <div class="room-info">
+    <h1 class="room-title" th:text="${room.title}">방 제목</h1>
+
+    <div class="room-meta">
+            <span class="status-badge"
+                  th:classappend="${room.status.name() == 'IN_PROGRESS'} ? 'status-in-progress' : 'status-completed'"
+                  th:text="${room.status.name() == 'IN_PROGRESS'} ? '진행 중' : '정산 완료'">
+                진행 중
+            </span>
+      <span th:if="${room.dueDate != null}">
+                · 마감 <span th:text="${#temporals.format(room.dueDate, 'yyyy.MM.dd')}">2026.06.12</span>
+            </span>
+      <span>· 방장: <span th:text="${room.ownerName}">최경환</span></span>
+    </div>
+  </div>
+
+  <!-- 멤버 섹션 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">멤버 (<span th:text="${#lists.size(members)}">5</span>)</h2>
+      <button th:if="${isOwner}" type="button" class="add-button" onclick="toggleAddMember()">+ 멤버 추가</button>
+    </div>
+
+    <!-- 멤버 추가 폼 (방장만, 토글) -->
+    <div th:if="${isOwner}" id="addMemberForm" class="add-member-form"
+         th:style="${addMemberError != null || addMemberSuccess != null} ? 'display: block;' : 'display: none;'">
+      <form th:action="@{/rooms/{id}/members(id=${room.id})}" method="post">
+        <input type="text" name="loginId" id="memberLoginIdInput" placeholder="추가할 사용자의 아이디" required>
+        <button type="submit">추가</button>
+      </form>
+      <div th:if="${addMemberError}" id="addMemberErrorMsg"  class="add-member-message error" th:text="${addMemberError}">에러</div>
+      <div th:if="${addMemberSuccess}" id="addMemberSuccessMsg" class="add-member-message success" th:text="${addMemberSuccess}">성공</div>
+    </div>
+
+    <div class="member-list">
+      <div th:each="member : ${members}" class="member-chip">
+        <span th:if="${member.isOwner()}" class="owner-icon">👑</span>
+        <span th:text="${member.name}">최경환</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 결제 내역 섹션 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">결제 내역 (<span th:text="${#lists.size(payments)}">2</span>)</h2>
+      <a th:href="@{/rooms/{id}/payments/new(id=${room.id})}" class="add-button">+ 결제 추가</a>
+    </div>
+
+    <div class="payment-list" th:if="${!payments.isEmpty()}">
+      <div th:each="payment : ${payments}" class="payment-item">
+        <div class="payment-top">
+          <span class="payment-title" th:text="${payment.title}">장보기</span>
+          <span class="payment-amount" th:text="${#numbers.formatInteger(payment.amount, 0, 'COMMA')} + '원'">80,000원</span>
+        </div>
+        <!-- 결제 내역 메타+버튼 줄 -->
+        <div class="item-meta-row">
+          <div class="payment-meta">
+            <span th:text="${payment.payerName}">최경환</span>님이 결제 ·
+            <span th:text="${#lists.size(payment.participants)}">5</span>명 나눔 ·
+            <span th:text="${#temporals.format(payment.paidAt, 'yyyy.MM.dd')}">2026.05.01</span>
+          </div>
+          <div th:if="${isOwner || payment.payerId == #authentication.principal.userId}" class="action-group">
+            <a th:href="@{/rooms/{roomId}/payments/{paymentId}/edit(roomId=${room.id}, paymentId=${payment.id})}"
+               class="action-button action-edit">수정</a>
+            <form th:action="@{/rooms/{roomId}/payments/{paymentId}/delete(roomId=${room.id}, paymentId=${payment.id})}"
+                  method="post"
+                  onsubmit="return confirm('이 결제를 정말 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.');"
+                  class="inline-form">
+              <button type="submit" class="action-button action-delete">삭제</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-payments" th:if="${payments.isEmpty()}">
+      아직 결제 내역이 없어요
+    </div>
+  </div>
+
+  <!-- 계좌 목록 섹션 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">계좌 목록 (<span th:text="${#lists.size(accounts)}">0</span>)</h2>
+      <button type="button" class="add-button" onclick="toggleAddAccount()">+ 계좌 추가</button>
+    </div>
+
+    <!-- 계좌 추가 폼 (전체 멤버, 토글) -->
+    <div id="addAccountForm" class="add-member-form"
+         th:style="${accountError != null} ? 'display: block;' : 'display: none;'">
+
+      <!-- 방장: 계좌 소유자 선택 가능 -->
+      <form th:if="${isOwner}" th:action="@{/rooms/{id}/accounts(id=${room.id})}" method="post">
+        <select name="userId">
+          <option value="">계좌 소유자 선택</option>
+          <option th:each="member : ${members}" th:value="${member.userId}" th:text="${member.name}">멤버</option>
+        </select>
+        <div class="form-row">
+          <input type="text" name="bank" placeholder="은행" style="flex: 1;">
+          <input type="text" name="accountNumber" placeholder="계좌번호" style="flex: 2;">
+        </div>
+        <button type="submit">추가</button>
+      </form>
+
+      <!-- 일반 멤버: 본인 계좌만 -->
+      <form th:unless="${isOwner}" th:action="@{/rooms/{id}/accounts(id=${room.id})}" method="post">
+        <input type="hidden" name="userId" th:value="${currentUserId}">
+        <div class="form-row">
+          <input type="text" name="bank" placeholder="은행" style="flex: 1;">
+          <input type="text" name="accountNumber" placeholder="계좌번호" style="flex: 2;">
+        </div>
+        <button type="submit">내 계좌 추가</button>
+      </form>
+
+      <div th:if="${accountError}" class="add-member-message error" th:text="${accountError}">에러</div>
+    </div>
+
+    <div class="payment-list" th:if="${!accounts.isEmpty()}">
+      <div th:each="account : ${accounts}" class="account-row">
+        <span class="account-holder" th:text="${account.holderName}">최경환</span>
+        <span class="account-bank-badge" th:text="${account.bank}">신한</span>
+        <span class="account-number" th:text="${account.accountNumber}">110-363-1234567</span>
+        <div th:if="${isOwner || account.userId == currentUserId}" class="action-group">
+          <form th:action="@{/rooms/{roomId}/accounts/{accountId}/delete(roomId=${room.id}, accountId=${account.id})}"
+                method="post"
+                onsubmit="return confirm('이 계좌를 삭제하시겠습니까?');"
+                class="inline-form">
+            <button type="submit" class="action-button action-delete">삭제</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-payments" th:if="${accounts.isEmpty()}">
+      아직 등록된 계좌가 없어요
+    </div>
+  </div>
+
+  <!-- 정산하기 버튼 -->
+  <a th:href="@{/rooms/{id}/settlement(id=${room.id})}" class="settle-button">🧮 정산하기</a>
+</div>
+
+<script>
+  function toggleAddMember() {
+    const form = document.getElementById('addMemberForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('memberLoginIdInput');
+    if (input) {
+      input.addEventListener('focus', () => {
+        const errorMsg = document.getElementById('addMemberErrorMsg');
+        const successMsg = document.getElementById('addMemberSuccessMsg');
+        if (errorMsg) errorMsg.style.display = 'none';
+        if (successMsg) successMsg.style.display = 'none';
+      });
+    }
+  });
+
+  function toggleAddAccount() {
+    const form = document.getElementById('addAccountForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+</script>
+
+</body>
+</html>

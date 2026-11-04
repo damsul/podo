@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${inquiry.title} + ' - Podo'">1:1 문의 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/inquiry.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a href="/inquiries" class="back-link">← 1:1 문의</a>
+
+    <div class="inquiry-card">
+        <div class="inquiry-title-row">
+            <h2 class="inquiry-detail-title" th:text="${inquiry.title}">제목</h2>
+            <span class="status-badge" th:classappend="${inquiry.answered} ? 'status-answered' : 'status-pending'"
+                  th:text="${inquiry.answered} ? '답변완료' : '답변대기'">답변대기</span>
+        </div>
+        <div class="inquiry-meta-row" th:text="${#temporals.format(inquiry.createdAt, 'yyyy.MM.dd')}">2026.08.10</div>
+
+        <p class="inquiry-content" th:text="${inquiry.content}">문의 내용</p>
+
+        <div class="answer-box" th:if="${inquiry.answered}">
+            <div class="answer-header">
+                <span class="answer-label">답변</span>
+                <span class="answer-date" th:text="${#temporals.format(inquiry.answeredAt, 'yyyy.MM.dd')}">2026.08.11</span>
+            </div>
+            <p class="answer-content" th:text="${inquiry.answer}">답변 내용</p>
+        </div>
+
+        <div class="detail-actions">
+            <a th:if="${!inquiry.answered}" th:href="@{/inquiries/{id}/edit(id=${inquiry.id})}" class="edit-link">수정하기</a>
+            <button th:if="${inquiry.answered}" type="button" disabled class="edit-disabled">수정 불가 (답변완료)</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

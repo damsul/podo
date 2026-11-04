@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>문의 상세 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-form-header">
+      <h2 class="admin-form-title" th:text="|문의 ${inquiry.id}|">문의 1</h2>
+      <div class="admin-form-actions">
+        <a href="/admin/inquiries" class="admin-cancel-button">목록으로</a>
+        <button type="submit" form="answerForm" class="admin-save-button"
+                th:text="${inquiry.answered} ? '답변 수정' : '답변 등록'">답변 등록</button>
+      </div>
+    </div>
+    <div class="admin-form-divider"></div>
+
+    <div class="admin-field-row">
+      <span class="admin-field-label">작성자</span>
+      <span class="admin-field-value" th:text="|${inquiry.writerName} (${inquiry.writerLoginId})|">홍길동 (hong)</span>
+    </div>
+
+    <div class="admin-field-row">
+      <span class="admin-field-label">상태</span>
+      <span>
+        <span class="admin-status-badge"
+              th:classappend="${inquiry.answered} ? 'answered' : 'pending'"
+              th:text="${inquiry.answered} ? '답변완료' : '미응답'">미응답</span>
+      </span>
+    </div>
+
+    <div class="admin-field-row">
+      <span class="admin-field-label">제목</span>
+      <span class="admin-field-value" th:text="${inquiry.title}">제목</span>
+    </div>
+
+    <div class="admin-field-row align-start">
+      <span class="admin-field-label">내용</span>
+      <span class="admin-field-value pre-wrap" th:text="${inquiry.content}">내용</span>
+    </div>
+
+    <div class="admin-field-row">
+      <span class="admin-field-label">작성일</span>
+      <span class="admin-field-value" th:text="${#temporals.format(inquiry.createdAt, 'yyyy-MM-dd HH:mm')}">2026-09-28 12:00</span>
+    </div>
+
+    <div class="admin-field-row" th:if="${inquiry.answered}">
+      <span class="admin-field-label">답변일</span>
+      <span class="admin-field-value" th:text="${#temporals.format(inquiry.answeredAt, 'yyyy-MM-dd HH:mm')}">2026-09-28 13:00</span>
+    </div>
+
+    <form id="answerForm" th:action="@{/admin/inquiries/{id}/answer(id=${inquiry.id})}"
+          th:object="${inquiryAnswerRequest}" method="post">
+      <div class="admin-field-row align-start">
+        <span class="admin-field-label with-padding">답변</span>
+        <div>
+          <textarea th:field="*{answer}" rows="8" class="admin-field-textarea"
+                    placeholder="답변 내용을 입력해주세요"></textarea>
+          <div class="admin-field-error" th:if="${#fields.hasErrors('answer')}" th:errors="*{answer}">오류</div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

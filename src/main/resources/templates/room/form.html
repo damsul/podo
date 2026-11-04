@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>새 페이방 만들기 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}"/>
+    <link rel="stylesheet" th:href="@{/css/room.css}"/>
+</head>
+<body>
+<!--
+<div class="header">
+    <a href="/" class="logo">🍇 Podo</a>
+</div>
+-->
+
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <div class="form-card">
+        <h2 class="form-title">새 페이방 만들기</h2>
+        <p class="form-subtitle">함께 더치페이할 사람들과 정산을 시작해보세요</p>
+
+        <form th:action="@{/rooms/new}" th:object="${payRoomCreateRequest}" method="post">
+
+            <div class="form-group">
+                <label for="title">
+                    방 제목 <span class="required">*</span>
+                </label>
+                <input type="text" id="title" th:field="*{title}"
+                       placeholder="예: Podo MT, 점심 회식" autofocus>
+                <div class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">
+                    제목 오류 메시지
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="dueDate">
+                    정산 마감일 <span class="hint">(선택)</span>
+                </label>
+                <input type="date" id="dueDate" th:field="*{dueDate}">
+            </div>
+
+            <div class="form-group">
+                <label for="roundUnit">
+                    절사 단위 <span class="hint">(선택, 기본 10원)</span>
+                </label>
+                <select id="roundUnit" th:field="*{roundUnit}">
+                    <option value="">기본값 (10원)</option>
+                    <option value="1">1원</option>
+                    <option value="10">10원</option>
+                    <option value="100">100원</option>
+                    <option value="1000">1,000원</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <a href="/" class="cancel-button">취소</a>
+                <button type="submit" class="submit-button">방 만들기</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

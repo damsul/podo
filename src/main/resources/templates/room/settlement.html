@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title th:text="${settlement.roomTitle} + ' 정산 결과 - Podo'">정산 결과 - Podo</title>
+  <link rel="stylesheet" th:href="@{/css/common.css}"/>
+  <link rel="stylesheet" th:href="@{/css/settlement.css}"/>
+</head>
+<body>
+
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+
+  <a th:href="@{/rooms/{id}(id=${settlement.roomId})}" class="back-link">← 페이방으로</a>
+
+  <!-- 요약 카드 -->
+  <div class="summary-card">
+    <div class="summary-title">🧮 정산 결과</div>
+    <h2 class="summary-room" th:text="${settlement.roomTitle}">Podo MT</h2>
+    <div class="summary-total" th:text="${#numbers.formatInteger(settlement.totalAmount, 0, 'COMMA')} + '원'">100,000원</div>
+    <div class="summary-label">총 결제 금액</div>
+  </div>
+
+  <div class="payment-group">
+    <div class="round-option-row">
+      <span class="round-label">절사 옵션</span>
+      <select id="roundSelect" class="round-select">
+        <option value="1" th:selected="${settlement.roundUnit == 1}">없음 (1원)</option>
+        <option value="10" th:selected="${settlement.roundUnit == 10}">10원</option>
+        <option value="100" th:selected="${settlement.roundUnit == 100}">100원</option>
+        <option value="1000" th:selected="${settlement.roundUnit == 1000}">1,000원</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="payment-group">
+    <div class="payment-group-header"><span class="payment-name">최종 정산</span></div>
+    <div class="transfer-list">
+      <div th:each="net : ${settlement.netTransfers}"
+           class="transfer-row net-row"
+           th:classappend="${net.settled} ? 'settled' : ''"
+           th:attr="data-raw=${net.rawAmount}">
+        <div class="transfer-from-to">
+          <span class="from-name" th:text="${net.fromUserName}"></span>
+          <span class="arrow">→</span>
+          <span class="to-name" th:text="${net.toUserName}"></span>
+          <span th:if="${net.settled}" class="settled-badge">완료</span>
+        </div>
+        <div class="transfer-right">
+          <div class="transfer-amount net-amount"
+               th:text="${#numbers.formatInteger(net.amount, 0, 'COMMA')} + '원'"></div>
+          <form th:if="${!net.settled}" method="post" class="toggle-form"
+                th:action="@{/rooms/{roomId}/payments/participants/settle-group(roomId=${settlement.roomId})}">
+            <input th:each="pid : ${net.participantIds}" type="hidden" name="participantIds" th:value="${pid}">
+            <button type="submit" class="toggle-button toggle-settle" th:disabled="${!settlement.roomOwner}">정산 완료</button>
+          </form>
+          <form th:if="${net.settled}" method="post" class="toggle-form"
+                th:action="@{/rooms/{roomId}/payments/participants/unsettle-group(roomId=${settlement.roomId})}">
+            <input th:each="pid : ${net.participantIds}" type="hidden" name="participantIds" th:value="${pid}">
+            <button type="submit" class="toggle-button toggle-unsettle" th:disabled="${!settlement.roomOwner}">완료 취소</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-group" th:if="${!accounts.isEmpty()}">
+    <div class="payment-group-header">
+      <span class="payment-name">계좌 정보</span>
+    </div>
+    <div class="account-list">
+      <div th:each="account : ${accounts}" class="account-row">
+        <span class="account-holder" th:text="${account.holderName}">최경환</span>
+        <div class="account-detail">
+          <span class="account-bank-badge" th:text="${account.bank}">신한</span>
+          <span class="account-number"
+                th:text="${account.accountNumber}"
+                th:attr="onclick=|copyAccountNumber(this, '${account.bank}')|">110-363-1234567</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-buttons-row">
+    <button type="button" id="detailButton" class="share-button detail-button">
+      📋 정산 상세 내역
+    </button>
+    <button type="button" id="shareButton" class="share-button">
+      📤 공유하기
+    </button>
+  </div>
+
+  <textarea id="shareTextArea" th:text="${shareText}" class="hidden-textarea"></textarea>
+
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title">정산 상세 내역</span>
+        <span onclick="document.getElementById('detailModal').style.display='none'" class="modal-close">✕</span>
+      </div>
+      <div th:each="entry : ${groupedTransfers}" class="detail-entry">
+        <div class="detail-entry-header">
+          <span class="detail-entry-title" th:text="${entry.key}"></span>
+          <span class="detail-per-person">1인당 <span th:text="${#numbers.formatInteger(entry.value[0].amount, 0, 'COMMA')} + '원'"></span></span>
+        </div>
+        <div th:each="transfer : ${entry.value}" class="transfer-row detail-transfer-row"
+             th:classappend="${transfer.settled} ? 'settled' : ''">
+          <div class="transfer-from-to">
+            <span class="from-name" th:text="${transfer.fromUserName}"></span>
+            <span class="arrow">→</span>
+            <span class="to-name" th:text="${transfer.toUserName}"></span>
+          </div>
+          <div class="transfer-amount detail-amount"
+               th:attr="data-raw=${transfer.rawAmount}"
+               th:text="${#numbers.formatInteger(transfer.amount, 0, 'COMMA')} + '원'"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+
+<script>
+  document.getElementById('roundSelect').addEventListener('change', () => {
+    const unit = Number(document.getElementById('roundSelect').value);
+    document.querySelectorAll('.net-row').forEach(row => {
+      const raw = Number(row.dataset.raw);
+      const rounded = Math.floor(raw / unit) * unit;
+      row.querySelector('.net-amount').textContent = rounded.toLocaleString() + '원';
+    });
+
+    document.querySelectorAll('.detail-amount').forEach(el => {
+      const raw = Number(el.dataset.raw);
+      const rounded = Math.floor(raw / unit) * unit;
+      el.textContent = rounded.toLocaleString() + '원';
+    });
+  });
+
+  document.getElementById('detailButton').addEventListener('click', () => {
+    document.getElementById('detailModal').style.display = 'flex';
+  });
+
+  document.getElementById('shareButton').addEventListener('click', async () => {
+    const text = document.getElementById('shareTextArea').value;
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('정산 내용이 복사되었습니다!');
+    } catch (e) {
+      alert('복사에 실패했습니다.');
+    }
+  });
+
+  function copyAccountNumber(el, bank) {
+    const text = `${bank} ${el.textContent}`;
+    const container = el.closest('.account-detail');
+    const originalHTML = container.innerHTML;
+
+    navigator.clipboard.writeText(text).then(() => {
+      container.style.opacity = '0';
+
+      setTimeout(() => {
+        container.innerHTML = '<span class="copied-label">복사됨!</span>';
+        container.style.opacity = '1';
+
+        setTimeout(() => {
+          container.style.opacity = '0';
+
+          setTimeout(() => {
+            container.innerHTML = originalHTML;
+            container.style.opacity = '1';
+          }, 200);
+        }, 1000);
+      }, 200);
+    }).catch(() => {
+      alert('복사에 실패했습니다.');
+    });
+  }
+</script>
+</body>
+</html>

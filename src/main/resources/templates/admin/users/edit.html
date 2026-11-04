@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>사용자 수정 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-content-header">
+      <h2 class="admin-content-title">사용자 수정</h2>
+    </div>
+    <div class="admin-form-divider"></div>
+
+    <div class="admin-card-wrap">
+      <div class="admin-notice" th:if="${message != null}" th:text="${message}">비밀번호를 변경했어요</div>
+
+      <div class="admin-card-title">기본정보</div>
+      <form th:action="@{/admin/users/{id}/edit(id=${user.id})}" th:object="${form}" method="post">
+        <div class="admin-card">
+          <div th:replace="~{admin/fragments/avatar :: avatar(${user.profileImageUrl})}"></div>
+
+          <div style="display:flex; gap:8px; justify-content:center; margin-top:14px;">
+            <label for="profileImage" class="admin-outline-button" style="cursor:pointer;">사진 변경</label>
+            <button type="submit" form="avatarDeleteForm" class="admin-delete-button"
+                    th:if="${!#strings.isEmpty(user.profileImageUrl)}">사진 삭제</button>
+          </div>
+          <input type="file" id="profileImage" name="profileImage" form="avatarUploadForm"
+                 accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="submitAvatar(this)">
+          <div class="admin-input-hint" style="text-align:center; margin-bottom:24px;">JPG·PNG·WEBP, 5MB 이하 · 삭제하면 기본 아이콘으로 돌아가요</div>
+          <div class="admin-field-error" style="text-align:center;" th:if="${imageError != null}" th:text="${imageError}">이미지 오류</div>
+
+
+          <div class="admin-input-group">
+            <label class="admin-input-label" for="name">이름<span class="required">*</span></label>
+            <input type="text" id="name" class="admin-input" th:field="*{name}">
+            <div class="admin-field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">에러</div>
+          </div>
+
+          <div class="admin-input-group">
+            <label class="admin-input-label">아이디</label>
+            <input type="text" class="admin-input" th:value="${#strings.isEmpty(user.loginId)} ? '-' : ${user.loginId}" disabled>
+            <div class="admin-input-hint">아이디는 변경할 수 없어요</div>
+          </div>
+
+          <div class="admin-input-group">
+            <label class="admin-input-label" for="email">이메일</label>
+            <div class="admin-input-row">
+              <input type="text" id="email" class="admin-input" th:field="*{email}" th:data-original="${user.email}">
+              <button type="button" class="admin-outline-button" onclick="checkEmail()">중복확인</button>
+            </div>
+            <div class="admin-check-result" id="emailResult"></div>
+            <div class="admin-field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">에러</div>
+          </div>
+
+          <div class="admin-card-actions">
+            <a th:href="@{/admin/users/{id}(id=${user.id})}" class="admin-outline-button">취소</a>
+            <button type="submit" class="admin-primary-button">저장</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="admin-card-title">비밀번호</div>
+      <div class="admin-card admin-card-compact">
+        <div class="admin-card-row" th:unless="${user.socialUser}">
+          <div>
+            <div class="admin-info-label">비밀번호</div>
+            <div class="admin-info-value mask">••••••••</div>
+          </div>
+          <button type="button" class="admin-outline-button" onclick="openPasswordModal()">비밀번호 변경</button>
+        </div>
+        <div class="admin-card-note" th:if="${user.socialUser}">소셜 로그인 계정은 비밀번호를 변경할 수 없어요</div>
+      </div>
+
+      <div class="admin-delete-row" th:unless="${user.deleted}">
+        <form th:action="@{/admin/users/{id}/withdraw(id=${user.id})}" method="post" class="admin-delete-form"
+              onsubmit="return confirm('정말 탈퇴 처리할까요?')">
+          <button type="submit" class="admin-delete-button">탈퇴 처리</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form id="avatarUploadForm" th:action="@{/admin/users/{id}/profile-image(id=${user.id})}"
+      method="post" enctype="multipart/form-data"></form>
+<form id="avatarDeleteForm" th:action="@{/admin/users/{id}/profile-image/delete(id=${user.id})}"
+      method="post" onsubmit="return confirm('프로필 사진을 삭제할까요?')"></form>
+
+<!-- 비밀번호 변경 모달 -->
+<div class="admin-modal-overlay" id="passwordModalOverlay"
+     th:unless="${user.socialUser}"
+     th:classappend="${passwordError != null} ? 'open'">
+  <div class="admin-modal narrow">
+    <div class="admin-modal-header">
+      <h3 class="admin-modal-title">비밀번호 변경</h3>
+      <button type="button" class="admin-modal-close" onclick="closePasswordModal()">✕</button>
+    </div>
+    <form th:action="@{/admin/users/{id}/password(id=${user.id})}" method="post">
+      <div class="admin-modal-body stretch">
+        <div class="admin-input-group">
+          <label class="admin-input-label" for="newPassword">새 비밀번호<span class="required">*</span></label>
+          <input type="password" id="newPassword" name="password" class="admin-input">
+          <div class="admin-input-hint">비밀번호 (8~20자)</div>
+        </div>
+        <div class="admin-input-group">
+          <label class="admin-input-label" for="newPasswordConfirm">새 비밀번호 확인<span class="required">*</span></label>
+          <input type="password" id="newPasswordConfirm" name="passwordConfirm" class="admin-input">
+          <div class="admin-field-error" th:if="${passwordError != null}" th:text="${passwordError}">에러</div>
+        </div>
+        <div class="admin-card-actions">
+          <button type="button" class="admin-outline-button" onclick="closePasswordModal()">취소</button>
+          <button type="submit" class="admin-primary-button">저장</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script th:src="@{/js/admin-user-check.js}"></script>
+<script>
+  function openPasswordModal() {
+    document.getElementById('passwordModalOverlay').classList.add('open');
+  }
+  function closePasswordModal() {
+    document.getElementById('passwordModalOverlay').classList.remove('open');
+  }
+
+  function submitAvatar(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('5MB 이하 이미지만 올릴 수 있어요.');
+      input.value = '';
+      return;
+    }
+    input.form.submit();
+  }
+</script>
+
+</body>
+</html>

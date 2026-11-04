@@ -1,0 +1,255 @@
+.container {
+    max-width: 700px;
+}
+.room-info {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+}
+.room-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #333;
+    margin: 0 0 10px 0;
+}
+.room-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    color: #777;
+    margin-bottom: 16px;
+}
+.section {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.section-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+.add-button {
+    background-color: #f0eaf7;
+    color: #6b4ea0;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+.add-button:hover {
+    background-color: #e3d6f0;
+}
+.member-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.member-chip {
+    background-color: #f5f0fa;
+    color: #5a3d8a;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.owner-icon {
+    color: #d4a017;
+}
+.payment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.payment-item {
+    border: 1px solid #eee;
+    padding: 14px;
+    border-radius: 8px;
+}
+.payment-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+}
+.payment-title {
+    font-weight: bold;
+    font-size: 15px;
+    color: #333;
+}
+.payment-amount {
+    font-weight: bold;
+    color: #6b4ea0;
+    font-size: 15px;
+}
+.payment-meta {
+    font-size: 12px;
+    color: #888;
+}
+.empty-payments {
+    text-align: center;
+    padding: 30px 0;
+    color: #aaa;
+    font-size: 14px;
+}
+.settle-button {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background-color: #6b4ea0;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+.settle-button:hover {
+    background-color: #5a3d8a;
+}
+.action-button {
+    border: 1px solid #ddd;
+    background: white;
+    padding: 4px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    color: #555;
+    font-family: inherit;
+}
+.action-button:hover {
+    background-color: #f5f5f5;
+}
+.action-edit {
+    color: #6b4ea0;
+    border-color: #d4c5e7;
+}
+.action-edit:hover {
+    background-color: #f5f0fa;
+}
+.action-delete {
+    color: #d6535e;
+    border-color: #e7c5c9;
+}
+.action-delete:hover {
+    background-color: #fbeeef;
+}
+.add-member-form {
+    margin-bottom: 14px;
+    padding: 12px;
+    background-color: #faf8fd;
+    border-radius: 8px;
+}
+.add-member-form form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.add-member-form select,
+.add-member-form input[type="text"] {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #333;
+    background-color: white;
+}
+.add-member-form select:focus,
+.add-member-form input[type="text"]:focus {
+    outline: none;
+    border-color: #6b4ea0;
+}
+.add-member-form button {
+    background-color: #6b4ea0;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.add-member-form button:hover {
+    background-color: #5a3d8a;
+}
+.add-member-message {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+.add-member-message.error {
+    background-color: #fdecea;
+    color: #c0392b;
+}
+.add-member-message.success {
+    background-color: #eafaf1;
+    color: #27ae60;
+}
+.item-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+.action-group {
+    display: flex;
+    gap: 8px;
+}
+.inline-form {
+    display: inline;
+    margin: 0;
+}
+.form-row {
+    display: flex;
+    gap: 8px;
+}
+.account-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+}
+.account-holder {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+    min-width: 52px;
+}
+.account-bank-badge {
+    background: #f5f0fa;
+    color: #5a3d8a;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.account-number {
+    font-size: 14px;
+    color: #6b4ea0;
+    font-weight: 500;
+    flex: 1;
+}

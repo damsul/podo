@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="sidebar" class="admin-sidebar">
+    <div class="admin-logo">🍇 Podo</div>
+    <div class="admin-logo-sub">Administration</div>
+    <div class="admin-welcome" th:text="${#authentication.principal.user.name} + '님, 환영합니다!'">관리자님, 환영합니다!</div>
+
+    <div class="admin-nav-group-title">회원 관리</div>
+    <a th:href="@{/admin/users}" class="admin-nav-link"
+       th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/users')} ? 'active'">사용자</a>
+    <a th:href="@{/admin/admins}" class="admin-nav-link"
+       th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/admins')} ? 'active'">관리자</a>
+
+    <div class="admin-nav-group-title">콘텐츠 관리</div>
+    <a th:href="@{/admin/rooms}" class="admin-nav-link"
+       th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/rooms')} ? 'active'">더치페이 방 목록</a>
+
+
+    <div class="admin-nav-group-title">고객센터</div>
+    <a th:href="@{/admin/notices}" class="admin-nav-link"
+       th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/notices')} ? 'active'">공지사항</a>
+    <a th:href="@{/admin/faqs}" class="admin-nav-link"
+       th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/faqs')} ? 'active'">FAQ</a>
+    <a th:href="@{/admin/inquiries}" class="admin-nav-link"
+       th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/inquiries')} ? 'active'">1:1 문의</a>
+
+    <form th:action="@{/logout}" method="post" class="admin-logout-form">
+        <button type="submit" class="admin-logout-link">로그아웃</button>
+    </form>
+</div>
+</body>
+</html>

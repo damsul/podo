@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문의하기 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/inquiry.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a href="/inquiries" class="back-link">← 1:1 문의</a>
+
+    <div class="inquiry-card">
+        <h2 class="inquiry-form-title">문의하기</h2>
+
+        <form th:action="@{/inquiries}" th:object="${inquiryCreateRequest}" method="post" class="inquiry-form">
+            <label for="title">제목</label>
+            <input type="text" id="title" th:field="*{title}" placeholder="제목을 입력해주세요">
+            <div class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">제목 오류</div>
+
+            <label for="content">내용</label>
+            <textarea id="content" th:field="*{content}" rows="6" placeholder="문의 내용을 입력해주세요"></textarea>
+            <div class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}">내용 오류</div>
+
+            <div class="inquiry-form-buttons">
+                <a href="/inquiries" class="form-cancel-button">취소</a>
+                <button type="submit" class="form-submit-button">등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

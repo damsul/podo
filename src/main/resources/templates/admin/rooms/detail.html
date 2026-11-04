@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>더치페이 방 상세 - Podo Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-content">
+    <div class="admin-content-header">
+      <h2 class="admin-content-title" th:text="${room.title}">방 제목</h2>
+      <a th:href="@{/admin/rooms}" class="admin-cancel-button">목록으로</a>
+    </div>
+    <div class="admin-form-divider"></div>
+
+    <div class="admin-field-row">
+      <span class="admin-field-label">방장</span>
+      <span class="admin-field-value" th:text="|${room.ownerName} (${room.ownerLoginId})|">홍길동 (hong)</span>
+    </div>
+    <div class="admin-field-row">
+      <span class="admin-field-label">참여자</span>
+      <span class="admin-field-value" th:text="${#strings.listJoin(room.memberNames, ', ')}">참여자들</span>
+    </div>
+    <div class="admin-field-row">
+      <span class="admin-field-label">생성일</span>
+      <span class="admin-field-value" th:text="${#temporals.format(room.createdAt, 'yyyy-MM-dd')}">2026-09-25</span>
+    </div>
+
+    <div class="admin-section-title">결제 목록</div>
+    <table class="admin-table">
+      <tr>
+        <th>결제일</th><th>제목</th><th class="col-center">금액</th><th></th>
+      </tr>
+      <tr th:each="payment : ${room.payments}">
+        <td th:text="${#temporals.format(payment.paidAt, 'yyyy-MM-dd')}">2026-09-28</td>
+        <td th:text="${payment.title}">제목</td>
+        <td class="col-center" th:text="|${#numbers.formatInteger(payment.amount, 0, 'COMMA')}원|">30,400원</td>
+        <td class="col-right">
+          <button type="button" class="admin-result-button"
+                  th:data-payment-id="${payment.id}"
+                  th:data-payment-title="${payment.title}"
+                  onclick="openResultModal(this)">결과 보기</button>
+        </td>
+      </tr>
+      <tr th:if="${room.payments.isEmpty()}">
+        <td colspan="4" class="admin-empty">등록된 결제가 없어요</td>
+      </tr>
+    </table>
+
+    <div class="admin-section-title">계좌 목록</div>
+    <table class="admin-table" id="admin-wrapper-accounts">
+      <tr>
+        <th>은행</th><th>계좌번호</th><th>예금주</th>
+      </tr>
+      <tr th:each="account : ${room.accounts}">
+        <td th:text="${account.bank}">농협</td>
+        <td th:text="${account.accountNumber}">312-0072-8266-91</td>
+        <td th:text="${account.holderName}">박지은</td>
+      </tr>
+      <tr th:if="${room.accounts.isEmpty()}">
+        <td colspan="3" class="admin-empty">등록된 계좌가 없어요</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- 결과 보기 모달 -->
+<div class="admin-modal-overlay" id="resultModalOverlay">
+  <div class="admin-modal">
+    <div class="admin-modal-header">
+      <h3 class="admin-modal-title" id="resultModalTitle">결과 보기</h3>
+      <button type="button" class="admin-modal-close" onclick="closeResultModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <table class="admin-table admin-modal-table" id="resultTransferTable">
+        <tr>
+          <th>누가</th><th>누구에게</th><th>얼마를?</th>
+        </tr>
+        <!-- JS로 채워짐 -->
+      </table>
+
+      <div class="admin-section-title sm admin-modal-table">계좌 정보</div>
+      <table class="admin-table admin-modal-table" id="resultAccountTable">
+        <tr>
+          <th>은행</th><th>계좌번호</th><th>예금주</th>
+        </tr>
+        <!-- JS로 계좌 목록 테이블에서 복사됨 -->
+      </table>
+    </div>
+  </div>
+</div>
+
+<script th:inline="javascript">
+  /*<![CDATA[*/
+  const roomId = /*[[${room.id}]]*/ 0;
+  /*]]>*/
+
+  function openResultModal(button) {
+    const paymentId = button.dataset.paymentId;
+    const paymentTitle = button.dataset.paymentTitle;
+
+    document.getElementById('resultModalTitle').textContent = paymentTitle;
+
+    fetch(`/admin/rooms/${roomId}/payments/${paymentId}/result`)
+            .then(res => res.json())
+            .then(transfers => {
+              const tbody = document.getElementById('resultTransferTable');
+              tbody.querySelectorAll('tr:not(:first-child)').forEach(tr => tr.remove());
+
+              if (transfers.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="3" class="admin-empty">정산 내역이 없어요</td>';
+                tbody.appendChild(tr);
+              } else {
+                transfers.forEach(t => {
+                  const tr = document.createElement('tr');
+                  tr.innerHTML = `
+                            <td>${t.fromUserName}</td>
+                            <td>${t.toUserName}</td>
+                            <td>${t.amount.toLocaleString()}원</td>
+                        `;
+                  tbody.appendChild(tr);
+                });
+              }
+
+              // 계좌 목록은 페이지에 이미 렌더된 테이블을 그대로 복사
+              const sourceRows = document.querySelectorAll('#admin-wrapper-accounts tr:not(:first-child)');
+              const resultAccountTable = document.getElementById('resultAccountTable');
+              resultAccountTable.querySelectorAll('tr:not(:first-child)').forEach(tr => tr.remove());
+              sourceRows.forEach(tr => resultAccountTable.appendChild(tr.cloneNode(true)));
+
+              document.getElementById('resultModalOverlay').classList.add('open');
+            });
+  }
+
+  function closeResultModal() {
+    document.getElementById('resultModalOverlay').classList.remove('open');
+  }
+</script>
+
+</body>
+</html>

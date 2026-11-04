@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>1:1 문의 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/inquiry.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← 홈으로</a>
+
+    <div class="inquiry-card">
+        <div class="inquiry-header-row">
+            <h2 class="inquiry-title">1:1 문의</h2>
+            <a href="/inquiries/new" class="write-button">+ 문의하기</a>
+        </div>
+
+        <form th:action="@{/inquiries}" method="get" class="search-row">
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어를 입력하세요">
+            <button type="submit" class="search-button">검색</button>
+        </form>
+
+        <div class="inquiry-list" th:if="${!inquiries.isEmpty()}">
+            <a th:each="inquiry : ${inquiries.content}"
+               th:href="@{/inquiries/{id}(id=${inquiry.id})}"
+               class="inquiry-item">
+                <div>
+                    <div class="inquiry-item-title" th:text="${inquiry.title}">제목</div>
+                    <span class="inquiry-item-date" th:text="${#temporals.format(inquiry.createdAt, 'yyyy.MM.dd')}">2026.08.10</span>
+                </div>
+                <span class="status-badge" th:classappend="${inquiry.answered} ? 'status-answered' : 'status-pending'"
+                      th:text="${inquiry.answered} ? '답변완료' : '답변대기'">답변대기</span>
+            </a>
+        </div>
+
+        <div class="empty-inquiry" th:if="${inquiries.isEmpty()}">
+            등록된 문의가 없어요
+        </div>
+
+        <div class="pagination" th:if="${inquiries.totalPages > 1}">
+            <a th:each="i : ${#numbers.sequence(0, inquiries.totalPages - 1)}"
+               th:href="@{/inquiries(page=${i}, keyword=${keyword})}"
+               th:text="${i + 1}"
+               th:class="${i == inquiries.number} ? 'current' : ''">1</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

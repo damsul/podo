@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<div th:fragment="layout(content)" class="admin-wrapper">
+    <div class="admin-sidebar">
+        <div class="admin-logo">🍇 Podo</div>
+        <div class="admin-logo-sub">Administration</div>
+
+        <div class="admin-welcome" th:text="${#authentication.principal.user.name} + '님, 환영합니다!'">관리자님, 환영합니다!</div>
+
+        <div class="admin-nav-group-title">회원 관리</div>
+        <a href="/admin/users" class="admin-nav-link">사용자</a>
+        <a href="/admin/admins" class="admin-nav-link">관리자</a>
+
+        <div class="admin-nav-group-title">콘텐츠 관리</div>
+        <a href="/admin/rooms" class="admin-nav-link">더치페이 방 목록</a>
+
+        <div class="admin-nav-group-title">고객센터</div>
+        <a href="/admin/notices" class="admin-nav-link">공지사항</a>
+        <a href="/admin/faqs" class="admin-nav-link">FAQ</a>
+        <a href="/admin/inquiries" class="admin-nav-link">1:1 문의</a>
+
+        <form th:action="@{/logout}" method="post" class="admin-logout-form">
+            <button type="submit" class="admin-logout-link">로그아웃</button>
+        </form>
+    </div>
+
+    <div class="admin-content">
+        <div th:replace="${content}"></div>
+    </div>
+</div>
+
+</body>
+</html>

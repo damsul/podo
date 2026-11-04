@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>정보 수정 - Podo</title>
+  <link rel="stylesheet" th:href="@{/css/common.css}"/>
+  <link rel="stylesheet" th:href="@{/css/mypage.css}"/>
+</head>
+<body>
+
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+  <a href="/mypage" class="back-link">← 마이페이지로</a>
+
+  <div class="form-card">
+    <form th:action="@{/mypage/edit}" th:object="${profileEditRequest}" method="post" enctype="multipart/form-data">
+
+      <div class="avatar-wrap">
+        <div class="avatar" id="avatarPreview"
+             th:attr="data-initial=${#strings.substring(user.name, 0, 1)}">
+          <img th:if="${user.profileImageUrl != null}" th:src="${user.profileImageUrl}" alt="프로필 사진">
+          <span th:unless="${user.profileImageUrl != null}" th:text="${#strings.substring(user.name, 0, 1)}">최</span>
+        </div>
+
+        <div style="display:flex; gap:12px; justify-content:center;">
+          <label for="profileImage" class="avatar-edit-label">프로필 사진 변경</label>
+          <a href="#" id="deleteImageBtn" class="avatar-edit-label"
+             th:if="${user.profileImageUrl != null}">사진 삭제</a>
+        </div>
+        <input type="file" id="profileImage" name="profileImage"
+               accept="image/jpeg,image/png,image/webp" style="display:none;">
+        <input type="hidden" id="deleteProfileImage" name="deleteProfileImage" value="false">
+        <div class="field-error" id="imageError" th:if="${imageError}" th:text="${imageError}">이미지 오류</div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">새 비밀번호</label>
+        <input type="password" id="password" th:field="*{password}"
+               th:disabled="${user.socialUser}"
+               placeholder="변경하지 않으려면 비워두세요">
+      </div>
+
+      <div class="form-group">
+        <label for="passwordConfirm">새 비밀번호 확인</label>
+        <input type="password" id="passwordConfirm" th:field="*{passwordConfirm}"
+               th:disabled="${user.socialUser}"
+               placeholder="새 비밀번호를 다시 입력하세요">
+        <div class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">비밀번호 오류</div>
+        <div class="field-error" th:if="${#fields.hasErrors('passwordConfirm')}" th:errors="*{passwordConfirm}">확인 불일치</div>
+        <div class="field-error" th:if="${user.socialUser}">소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">이메일</label>
+        <input type="text" id="email" th:field="*{email}">
+        <div class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">이메일 오류</div>
+      </div>
+
+      <div th:if="${editError}" class="edit-error" th:text="${editError}">에러</div>
+
+      <button type="submit" class="save-button">저장</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const input = document.getElementById('profileImage');
+  const avatar = document.getElementById('avatarPreview');
+  const delFlag = document.getElementById('deleteProfileImage');
+  const delBtn = document.getElementById('deleteImageBtn');
+  const MAX = 5 * 1024 * 1024;
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+
+  function showError(msg) {
+    let box = document.getElementById('imageError');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'imageError';
+      box.className = 'field-error';
+      avatar.parentElement.appendChild(box);
+    }
+    box.textContent = msg;
+  }
+
+  function clearError() {
+    const box = document.getElementById('imageError');
+    if (box) box.remove();
+  }
+
+  input.addEventListener('change', function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    if (!ALLOWED.includes(file.type) || file.size > MAX) {
+      this.value = '';
+      showError('JPG·PNG·WEBP 형식의 5MB 이하 이미지만 올릴 수 있어요.');
+      return;
+    }
+    clearError();
+    delFlag.value = 'false';
+    const reader = new FileReader();
+    reader.onload = e => { avatar.innerHTML = `<img src="${e.target.result}" alt="프로필 사진">`; };
+    reader.readAsDataURL(file);
+  });
+
+  if (delBtn) {
+    delBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      input.value = '';
+      delFlag.value = 'true';
+      avatar.innerHTML = '<span></span>';
+      avatar.firstChild.textContent = avatar.dataset.initial;
+    });
+  }
+</script>
+
+</body>
+</html>

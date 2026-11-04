@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}"/>
+    <link rel="stylesheet" th:href="@{/css/mypage.css}"/>
+</head>
+<body>
+
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← 홈으로</a>
+
+    <div class="mypage-card">
+        <div class="avatar-wrap">
+            <div class="avatar">
+                <img th:if="${user.profileImageUrl != null}" th:src="${user.profileImageUrl}" alt="프로필 사진">
+                <span th:unless="${user.profileImageUrl != null}" th:text="${#strings.substring(user.name, 0, 1)}">최</span>
+            </div>
+        </div>
+
+        <div class="info-list">
+            <div>
+                <span class="info-label">이름</span>
+                <div class="info-value name" th:text="${user.name}">최경환</div>
+            </div>
+            <div>
+                <span class="info-label">아이디</span>
+                <div class="info-value" th:text="${user.loginId}">pien</div>
+            </div>
+            <div>
+                <span class="info-label">이메일</span>
+                <div class="info-value" th:text="${user.email}">pien@naver.com</div>
+            </div>
+            <div>
+                <span class="info-label">가입일</span>
+                <div class="info-value" th:text="${#temporals.format(user.createdAt, 'yyyy.MM.dd')}">2026.03.12</div>
+            </div>
+        </div>
+
+        <a href="/mypage/edit" class="edit-button">정보 수정</a>
+    </div>
+</div>
+
+</body>
+</html>

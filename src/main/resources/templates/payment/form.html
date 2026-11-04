@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>결제 추가 - Podo</title>
+  <link rel="stylesheet" th:href="@{/css/common.css}"/>
+  <link rel="stylesheet" th:href="@{/css/payment.css}"/>
+</head>
+<body>
+
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+
+  <a th:href="@{/rooms/{id}(id=${room.id})}" class="back-link">← 페이방으로</a>
+
+  <div class="form-card">
+    <h2 class="form-title">결제 추가</h2>
+    <p class="room-name" th:text="${room.title}">Podo MT</p>
+
+    <form th:action="@{/rooms/{id}/payments/new(id=${room.id})}"
+          th:object="${paymentCreateRequest}" method="post">
+
+      <!-- 결제 제목 -->
+      <div class="form-group">
+        <label for="title">결제 항목 <span class="required">*</span></label>
+        <input type="text" id="title" th:field="*{title}" placeholder="예: 장보기, 야식 배달" autofocus>
+        <div class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">제목 오류</div>
+      </div>
+
+      <!-- 금액 -->
+      <div class="form-group">
+        <label for="amount">금액 (원) <span class="required">*</span></label>
+        <input type="number" id="amount" th:field="*{amount}" placeholder="예: 80000">
+        <div class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}">금액 오류</div>
+      </div>
+
+      <!-- 결제 날짜 -->
+      <div class="form-group">
+        <label for="paidAt">결제 날짜</label>
+        <input type="date" id="paidAt" th:field="*{paidAt}">
+      </div>
+
+      <!-- 결제자 선택 -->
+      <div class="form-group">
+        <label for="payerId">누가 결제했나요? <span class="required">*</span></label>
+
+        <select th:if="${isOwner}" id="payerId" th:field="*{payerId}">
+          <option value="">선택해주세요</option>
+          <option th:each="member : ${members}" th:value="${member.userId}" th:text="${member.name}">멤버</option>
+        </select>
+
+        <select th:unless="${isOwner}" id="payerId" th:field="*{payerId}">
+          <option th:value="${currentUserId}" th:text="${currentUserName}">본인</option>
+        </select>
+
+        <div class="field-error" th:if="${#fields.hasErrors('payerId')}" th:errors="*{payerId}">결제자 오류</div>
+      </div>
+
+      <!-- 참여자 체크박스 -->
+      <div class="form-group">
+        <label>
+          누가 나눠 낼까요? <span class="required">*</span>
+        </label>
+        <div class="participants-box">
+          <div th:each="member : ${members}" class="participant-row">
+            <input type="checkbox"
+                   th:id="'participant-' + ${member.userId}"
+                   th:field="*{participantIds}"
+                   th:value="${member.userId}">
+            <label th:for="'participant-' + ${member.userId}"
+                   th:text="${member.name}">멤버</label>
+          </div>
+        </div>
+        <div class="helper-buttons">
+          <button type="button" class="helper-button" onclick="selectAll()">전체 선택</button>
+          <button type="button" class="helper-button" onclick="deselectAll()">전체 해제</button>
+        </div>
+        <div class="field-error" th:if="${#fields.hasErrors('participantIds')}" th:errors="*{participantIds}">참여자 오류</div>
+      </div>
+
+      <div class="button-group">
+        <a th:href="@{/rooms/{id}(id=${room.id})}" class="cancel-button">취소</a>
+        <button type="submit" class="submit-button">결제 추가</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function selectAll() {
+    document.querySelectorAll('.participants-box input[type="checkbox"]')
+            .forEach(cb => cb.checked = true);
+  }
+  function deselectAll() {
+    document.querySelectorAll('.participants-box input[type="checkbox"]')
+            .forEach(cb => cb.checked = false);
+  }
+</script>
+
+</body>
+</html>

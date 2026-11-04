@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>사용자 상세 - Podo Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-content-header">
+            <h2 class="admin-content-title">사용자 상세</h2>
+            <div class="admin-form-actions">
+                <a th:href="@{/admin/users}" class="admin-cancel-button">목록으로</a>
+                <a th:href="@{/admin/users/{id}/edit(id=${user.id})}" class="admin-add-button">수정</a>
+            </div>
+        </div>
+        <div class="admin-form-divider"></div>
+
+        <div class="admin-card-wrap">
+            <div class="admin-card-title">기본정보</div>
+            <div class="admin-card">
+                <div th:replace="~{admin/fragments/avatar :: avatar(${user.profileImageUrl})}"></div>
+
+                <div class="admin-info-grid">
+                    <div>
+                        <div class="admin-info-label">이름</div>
+                        <div class="admin-info-value" th:text="${user.name}">이민욱</div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">아이디</div>
+                        <div class="admin-info-value" th:text="${#strings.isEmpty(user.loginId)} ? '-' : ${user.loginId}">minuk</div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">이메일</div>
+                        <div class="admin-info-value" th:text="${#strings.isEmpty(user.email)} ? '-' : ${user.email}">minuk@example.com</div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">가입 방식</div>
+                        <div class="admin-info-value" th:text="${user.socialLabel}">일반</div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">가입일</div>
+                        <div class="admin-info-value" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">2026-09-01</div>
+                    </div>
+                    <div>
+                        <div class="admin-info-label">상태</div>
+                        <div>
+              <span class="admin-status-badge"
+                    th:classappend="${user.deleted} ? 'withdrawn' : 'active'"
+                    th:text="${user.deleted} ? '탈퇴' : '활성'">활성</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card-title">참여 중인 방</div>
+            <div class="admin-card admin-card-table">
+                <table class="admin-table">
+                    <tr>
+                        <th>방 제목</th><th>역할</th><th>생성일</th>
+                    </tr>
+                    <tr th:each="room : ${user.rooms}">
+                        <td>
+                            <a th:href="@{/admin/rooms/{id}(id=${room.roomId})}" th:text="${room.title}" class="admin-table-link">제목</a>
+                        </td>
+                        <td th:text="${room.roleLabel}">참여자</td>
+                        <td th:text="${#temporals.format(room.createdAt, 'yyyy-MM-dd')}">2026-09-25</td>
+                    </tr>
+                    <tr th:if="${user.rooms.isEmpty()}">
+                        <td colspan="3" class="admin-empty">참여 중인 방이 없어요</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

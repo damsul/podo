@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문의 수정 - Podo</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/inquiry.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container">
+    <a th:href="@{/inquiries/{id}(id=${inquiry.id})}" class="back-link">← 문의 상세로</a>
+
+    <div class="inquiry-card">
+        <h2 class="inquiry-form-title">문의 수정</h2>
+
+        <form th:action="@{/inquiries/{id}/edit(id=${inquiry.id})}" th:object="${inquiryUpdateRequest}" method="post" class="inquiry-form">
+            <label for="title">제목</label>
+            <input type="text" id="title" th:field="*{title}">
+            <div class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">제목 오류</div>
+
+            <label for="content">내용</label>
+            <textarea id="content" th:field="*{content}" rows="6"></textarea>
+            <div class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}">내용 오류</div>
+
+            <div th:if="${editError}" class="edit-error" th:text="${editError}">에러</div>
+
+            <div class="inquiry-form-buttons">
+                <a th:href="@{/inquiries/{id}(id=${inquiry.id})}" class="form-cancel-button">취소</a>
+                <button type="submit" class="form-submit-button">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
