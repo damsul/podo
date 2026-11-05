@@ -6,11 +6,13 @@ import com.podo.domain.payroom.entity.Account;
 import com.podo.domain.payroom.entity.PayRoom;
 import com.podo.domain.payroom.entity.Payment;
 import com.podo.domain.payroom.entity.PaymentParticipant;
+import com.podo.domain.payroom.exception.NotRoomMemberException;
 import com.podo.domain.payroom.exception.PayRoomNotFoundException;
 import com.podo.domain.payroom.repository.AccountRepository;
 import com.podo.domain.payroom.repository.PayRoomRepository;
 import com.podo.domain.payroom.repository.PaymentParticipantRepository;
 import com.podo.domain.payroom.repository.PaymentRepository;
+import com.podo.domain.payroom.repository.RoomMemberRepository;
 import com.podo.domain.user.entity.User;
 import com.podo.domain.user.exception.UserNotFoundException;
 import com.podo.domain.user.repository.UserRepository;
@@ -35,10 +37,16 @@ public class SettlementService {
     private final PaymentParticipantRepository participantRepository;
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
+    private final RoomMemberRepository roomMemberRepository;
 
+    // 정산 결과는 저장하지 않고 요청할 때마다 계산 (방 멤버만 조회 가능)
+    // 관리자 화면은 방장 id를 넘겨 호출하므로 이 검사를 통과한다
     public SettlementResponse calculate(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
-        boolean isOwner = payRoom.isOwner(findUserById(userId));
+        User currentUser = findUserById(userId);
+        validateRoomMember(payRoom, currentUser);
+
+        boolean isOwner = payRoom.isOwner(currentUser);
         int roundUnit = payRoom.getRoundUnit();
 
         List<Payment> payments = paymentRepository.findByPayRoom(payRoom);
@@ -96,8 +104,9 @@ public class SettlementService {
                 .build();
     }
 
-    public String generateShareText(Long roomId) {
-        SettlementResponse settlement = calculateForShare(roomId);
+    // 공유 문구에는 계좌번호가 들어가므로 방 멤버만 생성 가능 (calculate에서 검사)
+    public String generateShareText(Long roomId, Long userId) {
+        SettlementResponse settlement = calculate(roomId, userId);
         PayRoom payRoom = findPayRoomById(roomId);
         List<Account> accounts = accountRepository.findByPayRoom(payRoom);
 
@@ -117,11 +126,6 @@ public class SettlementService {
         return sb.toString();
     }
 
-    private SettlementResponse calculateForShare(Long roomId) {
-        PayRoom payRoom = findPayRoomById(roomId);
-        return calculate(roomId, payRoom.getOwner().getId());
-    }
-
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
@@ -130,6 +134,12 @@ public class SettlementService {
     private PayRoom findPayRoomById(Long roomId) {
         return payRoomRepository.findById(roomId)
                 .orElseThrow(() -> new PayRoomNotFoundException(roomId));
+    }
+
+    private void validateRoomMember(PayRoom payRoom, User user) {
+        if (!roomMemberRepository.existsByPayRoomAndUser(payRoom, user)) {
+            throw new NotRoomMemberException();
+        }
     }
 
     private static class NetAccumulator {
@@ -144,5 +154,4 @@ public class SettlementService {
             this.toUser = toUser;
         }
     }
-
 }

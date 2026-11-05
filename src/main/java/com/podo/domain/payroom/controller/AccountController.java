@@ -45,16 +45,6 @@ public class AccountController {
         return "redirect:/rooms/" + roomId;
     }
 
-    private String getFirstErrorInOrder(BindingResult bindingResult, String... fieldOrder) {
-        for (String field : fieldOrder) {
-            FieldError error = bindingResult.getFieldError(field);
-            if (error != null) {
-                return error.getDefaultMessage();
-            }
-        }
-        return bindingResult.getAllErrors().getFirst().getDefaultMessage();
-    }
-
     @PostMapping("/{accountId}")
     public String update(@PathVariable Long roomId,
                          @PathVariable Long accountId,
@@ -63,13 +53,13 @@ public class AccountController {
                          @AuthenticationPrincipal PrincipalUser principal,
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute("accountError",
-                    bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            String errorMessage = getFirstErrorInOrder(bindingResult, "bank", "accountNumber");
+            redirectAttributes.addFlashAttribute("accountError", errorMessage);
             return "redirect:/rooms/" + roomId;
         }
 
         try {
-            accountService.update(accountId, principal.getUserId(), request);
+            accountService.update(roomId, accountId, principal.getUserId(), request);
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("accountError", e.getMessage());
         }
@@ -83,11 +73,21 @@ public class AccountController {
                          @AuthenticationPrincipal PrincipalUser principal,
                          RedirectAttributes redirectAttributes) {
         try {
-            accountService.delete(accountId, principal.getUserId());
+            accountService.delete(roomId, accountId, principal.getUserId());
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("accountError", e.getMessage());
         }
 
         return "redirect:/rooms/" + roomId;
+    }
+
+    private String getFirstErrorInOrder(BindingResult bindingResult, String... fieldOrder) {
+        for (String field : fieldOrder) {
+            FieldError error = bindingResult.getFieldError(field);
+            if (error != null) {
+                return error.getDefaultMessage();
+            }
+        }
+        return bindingResult.getAllErrors().getFirst().getDefaultMessage();
     }
 }

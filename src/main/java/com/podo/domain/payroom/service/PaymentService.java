@@ -55,25 +55,23 @@ public class PaymentService {
         return PaymentResponse.from(payment, participants);
     }
 
-    public PaymentResponse findById(Long paymentId) {
-        Payment payment = findPaymentById(paymentId);
-        List<PaymentParticipant> participants = participantRepository.findByPayment(payment);
-        return PaymentResponse.from(payment, participants);
-    }
-
-    public List<PaymentResponse> findByRoom(Long roomId) {
+    public List<PaymentResponse> findByRoom(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
+        validateRoomMember(payRoom, findUserById(userId));
         return paymentRepository.findByPayRoom(payRoom).stream()
-                .map(payment -> {
-                    List<PaymentParticipant> participants = participantRepository.findByPayment(payment);
-                    return PaymentResponse.from(payment, participants);
-                })
+                .map(payment -> PaymentResponse.from(payment, participantRepository.findByPayment(payment)))
                 .toList();
     }
 
+    public PaymentResponse findById(Long roomId, Long paymentId, Long userId) {
+        Payment payment = findPaymentInRoom(roomId, paymentId);
+        validateRoomMember(payment.getPayRoom(), findUserById(userId));
+        return PaymentResponse.from(payment, participantRepository.findByPayment(payment));
+    }
+
     @Transactional
-    public PaymentResponse update(Long paymentId, Long userId, PaymentUpdateRequest request) {
-        Payment payment = findPaymentById(paymentId);
+    public PaymentResponse update(Long roomId, Long paymentId, Long userId, PaymentUpdateRequest request) {
+        Payment payment = findPaymentInRoom(roomId, paymentId);
         User currentUser = findUserById(userId);
 
         validateModifier(payment, currentUser);
@@ -95,8 +93,8 @@ public class PaymentService {
     }
 
     @Transactional
-    public void delete(Long paymentId, Long userId) {
-        Payment payment = findPaymentById(paymentId);
+    public void delete(Long roomId, Long paymentId, Long userId) {
+        Payment payment = findPaymentInRoom(roomId, paymentId);
         User user = findUserById(userId);
 
         validateModifier(payment, user);
@@ -208,4 +206,11 @@ public class PaymentService {
                 .toList();
     }
 
+    private Payment findPaymentInRoom(Long roomId, Long paymentId) {
+        Payment payment = findPaymentById(paymentId);
+        if (!payment.getPayRoom().getId().equals(roomId)) {
+            throw new PaymentNotFoundException(paymentId);
+        }
+        return payment;
+    }
 }

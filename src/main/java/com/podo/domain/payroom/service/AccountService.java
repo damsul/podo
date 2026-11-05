@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -50,26 +49,30 @@ public class AccountService {
         return AccountResponse.from(account);
     }
 
-    public List<AccountResponse> findByRoom(Long roomId) {
+    // 계좌번호는 민감 정보라 방 멤버만 조회 가능
+    public List<AccountResponse> findByRoom(Long roomId, Long currentUserId) {
         PayRoom payRoom = findPayRoomById(roomId);
+        validateRoomMember(payRoom, findUserById(currentUserId));
+
         return accountRepository.findByPayRoom(payRoom).stream()
                 .map(AccountResponse::from)
                 .toList();
     }
 
     @Transactional
-    public AccountResponse update(Long accountId, Long currentUserId, AccountUpdateRequest request) {
-        Account account = findAccountById(accountId);
+    public AccountResponse update(Long roomId, Long accountId, Long currentUserId, AccountUpdateRequest request) {
+        Account account = findAccountInRoom(roomId, accountId);
         User currentUser = findUserById(currentUserId);
         validateAccountModifier(account.getPayRoom(), currentUser, account.getUser());
 
-        account.update(request.getBank(), request.getAccountNumber(), request.getHolderName());
+        // 예금주는 입력받지 않고 계좌 소유자 이름으로 유지
+        account.update(request.getBank(), request.getAccountNumber(), account.getUser().getName());
         return AccountResponse.from(account);
     }
 
     @Transactional
-    public void delete(Long accountId, Long currentUserId) {
-        Account account = findAccountById(accountId);
+    public void delete(Long roomId, Long accountId, Long currentUserId) {
+        Account account = findAccountInRoom(roomId, accountId);
         User currentUser = findUserById(currentUserId);
         validateAccountModifier(account.getPayRoom(), currentUser, account.getUser());
 
@@ -91,6 +94,15 @@ public class AccountService {
                 .orElseThrow(() -> new AccountNotFoundException(accountId));
     }
 
+    // URL의 방과 계좌가 속한 방이 다르면 "없음"으로 응답 (존재 여부를 알려 주지 않음)
+    private Account findAccountInRoom(Long roomId, Long accountId) {
+        Account account = findAccountById(accountId);
+        if (!account.getPayRoom().getId().equals(roomId)) {
+            throw new AccountNotFoundException(accountId);
+        }
+        return account;
+    }
+
     private void validateAccountModifier(PayRoom payRoom, User currentUser, User accountOwner) {
         boolean isOwner = payRoom.isOwner(currentUser);
         boolean isSelf = currentUser.getId().equals(accountOwner.getId());
@@ -104,6 +116,4 @@ public class AccountService {
             throw new NotRoomMemberException();
         }
     }
-
-
 }

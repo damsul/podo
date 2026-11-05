@@ -8,6 +8,7 @@ import com.podo.domain.payroom.dto.response.PayRoomResponse;
 import com.podo.domain.payroom.dto.request.PayRoomUpdateRequest;
 import com.podo.domain.payroom.entity.*;
 import com.podo.domain.payroom.exception.AlreadyRoomMemberException;
+import com.podo.domain.payroom.exception.NotRoomMemberException;
 import com.podo.domain.payroom.exception.NotRoomOwnerException;
 import com.podo.domain.payroom.exception.PayRoomNotFoundException;
 import com.podo.domain.payroom.repository.AccountRepository;
@@ -53,13 +54,15 @@ public class PayRoomService {
         return PayRoomResponse.from(savedRoom);
     }
 
-    public PayRoomResponse findById(Long roomId) {
+    public PayRoomResponse findById(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
+        validateRoomMember(payRoom, findUserById(userId));
         return PayRoomResponse.from(payRoom);
     }
 
-    public List<MemberInfo> findMembers(Long roomId) {
+    public List<MemberInfo> findMembers(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
+        validateRoomMember(payRoom, findUserById(userId));
         return roomMemberRepository.findByPayRoom(payRoom).stream()
                 .map(rm -> MemberInfo.from(rm, payRoom))
                 .toList();
@@ -166,6 +169,12 @@ public class PayRoomService {
     private void validateOwner(PayRoom payRoom, User user) {
         if (!payRoom.isOwner(user)) {
             throw new NotRoomOwnerException();
+        }
+    }
+
+    private void validateRoomMember(PayRoom payRoom, User user) {
+        if (!roomMemberRepository.existsByPayRoomAndUser(payRoom, user)) {
+            throw new NotRoomMemberException();
         }
     }
 

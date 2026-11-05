@@ -46,7 +46,10 @@ public class SettlementApiController {
     }
 
     @GetMapping("/share")
-    public ApiResponse<String> getShareText(@PathVariable Long roomId) {
-        return ApiResponse.success(settlementService.generateShareText(roomId));
+    public ApiResponse<String> getShareText(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal PrincipalUser principal
+    ) {
+        return ApiResponse.success(settlementService.generateShareText(roomId, principal.getUserId()));
     }
 }

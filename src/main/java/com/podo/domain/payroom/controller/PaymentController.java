@@ -16,7 +16,6 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,27 +31,12 @@ public class PaymentController {
     public String createForm(@PathVariable Long roomId,
                              @AuthenticationPrincipal PrincipalUser principal,
                              Model model) {
-
-        PayRoomResponse room = payRoomService.findById(roomId);
-        List<MemberInfo> members = payRoomService.findMembers(roomId);
+        addFormAttributes(roomId, principal.getUserId(), model);
 
         PaymentCreateRequest request = new PaymentCreateRequest();
         request.setPaidAt(LocalDate.now());
         request.setPayerId(principal.getUserId());
-
-        boolean isOwner = room.getOwnerId().equals(principal.getUserId());
-        String currentUserName = members.stream()
-                .filter(m -> m.getUserId().equals(principal.getUserId()))
-                .findFirst()
-                .map(MemberInfo::getName)
-                .orElse("");
-
-        model.addAttribute("room", room);
-        model.addAttribute("members", members);
         model.addAttribute("paymentCreateRequest", request);
-        model.addAttribute("isOwner", isOwner);
-        model.addAttribute("currentUserName", currentUserName);
-        model.addAttribute("currentUserId", principal.getUserId());
 
         return "payment/form";
     }
@@ -64,16 +48,7 @@ public class PaymentController {
                          @AuthenticationPrincipal PrincipalUser principal,
                          Model model) {
         if (bindingResult.hasErrors()) {
-            PayRoomResponse room = payRoomService.findById(roomId);
-            List<MemberInfo> members = payRoomService.findMembers(roomId);
-            boolean isOwner = room.getOwnerId().equals(principal.getUserId());
-            String currentUserName = members.stream()
-                    .filter(m -> m.getUserId().equals(principal.getUserId()))
-                    .findFirst().map(MemberInfo::getName).orElse("");
-            model.addAttribute("room", room);
-            model.addAttribute("members", members);
-            model.addAttribute("isOwner", isOwner);
-            model.addAttribute("currentUserName", currentUserName);
+            addFormAttributes(roomId, principal.getUserId(), model);
             return "payment/form";
         }
 
@@ -121,9 +96,8 @@ public class PaymentController {
                            @PathVariable Long paymentId,
                            @AuthenticationPrincipal PrincipalUser principal,
                            Model model) {
-        PayRoomResponse room = payRoomService.findById(roomId);
-        List<MemberInfo> members = payRoomService.findMembers(roomId);
-        PaymentResponse payment = paymentService.findById(paymentId);
+        addFormAttributes(roomId, principal.getUserId(), model);
+        PaymentResponse payment = paymentService.findById(roomId, paymentId, principal.getUserId());
 
         PaymentUpdateRequest request = PaymentUpdateRequest.builder()
                 .title(payment.getTitle())
@@ -135,19 +109,8 @@ public class PaymentController {
                         .toList())
                 .build();
 
-        boolean isOwner = room.getOwnerId().equals(principal.getUserId());
-        String currentUserName = members.stream()
-                .filter(m -> m.getUserId().equals(principal.getUserId()))
-                .findFirst()
-                .map(MemberInfo::getName)
-                .orElse("");
-
-        model.addAttribute("room", room);
-        model.addAttribute("members", members);
         model.addAttribute("payment", payment);
         model.addAttribute("paymentUpdateRequest", request);
-        model.addAttribute("isOwner", isOwner);
-        model.addAttribute("currentUserName", currentUserName);
 
         return "payment/edit-form";
     }
@@ -159,22 +122,14 @@ public class PaymentController {
                        BindingResult bindingResult,
                        @AuthenticationPrincipal PrincipalUser principal,
                        Model model) {
-        // create()의 bindingResult.hasErrors() 블록 안
         if (bindingResult.hasErrors()) {
-            PayRoomResponse room = payRoomService.findById(roomId);
-            List<MemberInfo> members = payRoomService.findMembers(roomId);
-            boolean isOwner = room.getOwnerId().equals(principal.getUserId());
-            String currentUserName = members.stream()
-                    .filter(m -> m.getUserId().equals(principal.getUserId()))
-                    .findFirst().map(MemberInfo::getName).orElse("");
-            model.addAttribute("room", room);
-            model.addAttribute("members", members);
-            model.addAttribute("isOwner", isOwner);
-            model.addAttribute("currentUserName", currentUserName);
-            return "payment/form";
+            // 수정 화면으로 돌아가야 하므로 edit-form + payment 정보를 함께 넘긴다
+            addFormAttributes(roomId, principal.getUserId(), model);
+            model.addAttribute("payment", paymentService.findById(roomId, paymentId, principal.getUserId()));
+            return "payment/edit-form";
         }
 
-        paymentService.update(paymentId, principal.getUserId(), request);
+        paymentService.update(roomId, paymentId, principal.getUserId(), request);
 
         return "redirect:/rooms/" + roomId;
     }
@@ -183,7 +138,26 @@ public class PaymentController {
     public String delete(@PathVariable Long roomId,
                          @PathVariable Long paymentId,
                          @AuthenticationPrincipal PrincipalUser principal) {
-        paymentService.delete(paymentId, principal.getUserId());
+        paymentService.delete(roomId, paymentId, principal.getUserId());
         return "redirect:/rooms/" + roomId;
+    }
+
+    // 결제 추가·수정 폼에 공통으로 필요한 화면 데이터 (방 멤버만 조회 가능)
+    private void addFormAttributes(Long roomId, Long userId, Model model) {
+        PayRoomResponse room = payRoomService.findById(roomId, userId);
+        List<MemberInfo> members = payRoomService.findMembers(roomId, userId);
+
+        boolean isOwner = room.getOwnerId().equals(userId);
+        String currentUserName = members.stream()
+                .filter(m -> m.getUserId().equals(userId))
+                .findFirst()
+                .map(MemberInfo::getName)
+                .orElse("");
+
+        model.addAttribute("room", room);
+        model.addAttribute("members", members);
+        model.addAttribute("isOwner", isOwner);
+        model.addAttribute("currentUserName", currentUserName);
+        model.addAttribute("currentUserId", userId);
     }
 }

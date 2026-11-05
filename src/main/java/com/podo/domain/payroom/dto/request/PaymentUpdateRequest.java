@@ -19,7 +19,7 @@ public class PaymentUpdateRequest {
     @Size(max = 100, message = "제목은 최대 100자까지 입력 가능합니다")
     private String title;
 
-    @NotNull
+    @NotNull(message = "금액을 입력해주세요.")
     @Min(value = 1, message = "결제 금액은 0보다 커야 합니다")
     private Integer amount;
 

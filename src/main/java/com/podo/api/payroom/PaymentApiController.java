@@ -1,8 +1,8 @@
 package com.podo.api.payroom;
 
 import com.podo.domain.payroom.dto.request.PaymentCreateRequest;
-import com.podo.domain.payroom.dto.response.PaymentResponse;
 import com.podo.domain.payroom.dto.request.PaymentUpdateRequest;
+import com.podo.domain.payroom.dto.response.PaymentResponse;
 import com.podo.domain.payroom.service.PaymentService;
 import com.podo.global.common.ApiResponse;
 import com.podo.global.security.PrincipalUser;
@@ -21,16 +21,20 @@ public class PaymentApiController {
     private final PaymentService paymentService;
 
     @GetMapping
-    public ApiResponse<List<PaymentResponse>> getPayments(@PathVariable Long roomId) {
-        List<PaymentResponse> rooms = paymentService.findByRoom(roomId);
-        return ApiResponse.success(rooms);
+    public ApiResponse<List<PaymentResponse>> getPayments(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal PrincipalUser principal
+    ) {
+        return ApiResponse.success(paymentService.findByRoom(roomId, principal.getUserId()));
     }
 
     @GetMapping("/{paymentId}")
-    public ApiResponse<PaymentResponse> getPayment(@PathVariable Long roomId,
-                                                   @PathVariable Long paymentId) {
-        PaymentResponse payment = paymentService.findById(paymentId);
-        return ApiResponse.success(payment);
+    public ApiResponse<PaymentResponse> getPayment(
+            @PathVariable Long roomId,
+            @PathVariable Long paymentId,
+            @AuthenticationPrincipal PrincipalUser principal
+    ) {
+        return ApiResponse.success(paymentService.findById(roomId, paymentId, principal.getUserId()));
     }
 
     @PostMapping
@@ -39,8 +43,7 @@ public class PaymentApiController {
             @Valid @RequestBody PaymentCreateRequest request,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        PaymentResponse payment = paymentService.create(roomId, principal.getUserId(), request);
-        return ApiResponse.success(payment);
+        return ApiResponse.success(paymentService.create(roomId, principal.getUserId(), request));
     }
 
     @PutMapping("/{paymentId}")
@@ -49,9 +52,8 @@ public class PaymentApiController {
             @PathVariable Long paymentId,
             @Valid @RequestBody PaymentUpdateRequest request,
             @AuthenticationPrincipal PrincipalUser principal
-            ) {
-        PaymentResponse payment = paymentService.update(paymentId, principal.getUserId(), request);
-        return ApiResponse.success(payment);
+    ) {
+        return ApiResponse.success(paymentService.update(roomId, paymentId, principal.getUserId(), request));
     }
 
     @DeleteMapping("/{paymentId}")
@@ -60,7 +62,7 @@ public class PaymentApiController {
             @PathVariable Long paymentId,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        paymentService.delete(paymentId, principal.getUserId());
+        paymentService.delete(roomId, paymentId, principal.getUserId());
         return ApiResponse.success();
     }
 }

@@ -58,19 +58,22 @@ public class PayRoomController {
     public String detail(@PathVariable Long roomId,
                          @AuthenticationPrincipal PrincipalUser principal,
                          Model model) {
-        PayRoomResponse room = payRoomService.findById(roomId);
-        List<MemberInfo> members = payRoomService.findMembers(roomId);
-        List<PaymentResponse> payments = paymentService.findByRoom(roomId);
-        List<AccountResponse> accounts = accountService.findByRoom(roomId);
+        Long userId = principal.getUserId();
 
-        boolean isOwner = room.getOwnerId().equals(principal.getUserId());
+        // 각 서비스가 방 멤버인지 확인한다 (멤버가 아니면 NotRoomMemberException → 403)
+        PayRoomResponse room = payRoomService.findById(roomId, userId);
+        List<MemberInfo> members = payRoomService.findMembers(roomId, userId);
+        List<PaymentResponse> payments = paymentService.findByRoom(roomId, userId);
+        List<AccountResponse> accounts = accountService.findByRoom(roomId, userId);
+
+        boolean isOwner = room.getOwnerId().equals(userId);
 
         model.addAttribute("room", room);
         model.addAttribute("members", members);
         model.addAttribute("payments", payments);
         model.addAttribute("accounts", accounts);
         model.addAttribute("isOwner", isOwner);
-        model.addAttribute("currentUserId", principal.getUserId());
+        model.addAttribute("currentUserId", userId);
 
         return "room/detail";
     }
@@ -79,7 +82,9 @@ public class PayRoomController {
     public String settlement(@PathVariable Long roomId,
                              @AuthenticationPrincipal PrincipalUser principal,
                              Model model) {
-        SettlementResponse settlement = settlementService.calculate(roomId, principal.getUserId());
+        Long userId = principal.getUserId();
+
+        SettlementResponse settlement = settlementService.calculate(roomId, userId);
         LinkedHashMap<String, List<TransferInfo>> grouped = settlement.getTransfers().stream()
                 .collect(Collectors.groupingBy(
                         TransferInfo::getPaymentTitle,
@@ -87,8 +92,8 @@ public class PayRoomController {
                         Collectors.toList()
                 ));
 
-        String shareText = settlementService.generateShareText(roomId);
-        List<AccountResponse> accounts = accountService.findByRoom(roomId);
+        String shareText = settlementService.generateShareText(roomId, userId);
+        List<AccountResponse> accounts = accountService.findByRoom(roomId, userId);
 
         model.addAttribute("settlement", settlement);
         model.addAttribute("groupedTransfers", grouped);
@@ -121,5 +126,4 @@ public class PayRoomController {
 
         return "redirect:/rooms/" + roomId;
     }
-
 }

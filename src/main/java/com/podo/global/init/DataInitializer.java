@@ -48,6 +48,9 @@ public class DataInitializer implements CommandLineRunner {
         // 4. 계좌 정보 생성
         createAccounts(mtRoom, users);
 
+        // 4-1. 권한 확인용: 외부인의 방 (다른 사용자와 겹치지 않음)
+        createOutsiderRoom(users);
+
         // 5. 고객센터 데이터 생성
         createNotices();
         createFaqs();
@@ -105,15 +108,24 @@ public class DataInitializer implements CommandLineRunner {
                 .role(Role.USER)
                 .build();
 
+        User outsider = User.builder()
+                .loginId("outsider")
+                .password(passwordEncoder.encode("password123"))
+                .name("김외부")
+                .email("outsider@podo.com")
+                .role(Role.USER)
+                .build();
+
         em.persist(admin);
         em.persist(gyounghwan);
         em.persist(minwook);
         em.persist(juhwang);
         em.persist(youngjun);
         em.persist(sohyun);
+        em.persist(outsider);
 
-        log.info("👤 사용자 6명 생성 완료");
-        return List.of(admin, gyounghwan, minwook, juhwang, youngjun, sohyun);
+        log.info("👤 사용자 7명 생성 완료");
+        return List.of(admin, gyounghwan, minwook, juhwang, youngjun, sohyun, outsider);
     }
 
     private PayRoom createMtRoom(List<User> users) {
@@ -262,6 +274,46 @@ public class DataInitializer implements CommandLineRunner {
                 .build());
 
         log.info("🏦 Podo MT 계좌 2개 등록");
+    }
+
+    private void createOutsiderRoom(List<User> users) {
+        User outsider = users.get(6);
+
+        PayRoom room = PayRoom.builder()
+                .owner(outsider)
+                .title("외부인 방")
+                .roundUnit(10)
+                .build();
+        em.persist(room);
+
+        em.persist(RoomMember.builder()
+                .payRoom(room)
+                .user(outsider)
+                .build());
+
+        Payment payment = Payment.builder()
+                .payRoom(room)
+                .payer(outsider)
+                .title("혼밥")
+                .amount(12000)
+                .paidAt(LocalDate.of(2026, 5, 10))
+                .build();
+        em.persist(payment);
+
+        em.persist(PaymentParticipant.builder()
+                .payment(payment)
+                .user(outsider)
+                .build());
+
+        em.persist(Account.builder()
+                .payRoom(room)
+                .user(outsider)
+                .bank("국민은행")
+                .accountNumber("000-00-0000000")
+                .holderName("김외부")
+                .build());
+
+        log.info("🚪 권한 확인용 외부인 방 생성");
     }
 
     private void createNotices() {

@@ -25,4 +25,6 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
             "WHERE rm.user.id = :userId " +
             "ORDER BY pr.createdAt DESC")
     List<RoomMember> findAllByUserIdWithRoom(@Param("userId") Long userId);
+
+    User user(User user);
 }

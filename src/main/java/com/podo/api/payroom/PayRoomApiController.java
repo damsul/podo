@@ -26,20 +26,23 @@ public class PayRoomApiController {
     public ApiResponse<List<PayRoomResponse>> getMyRooms(
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        List<PayRoomResponse> rooms = payRoomService.findMyRooms(principal.getUserId());
-        return ApiResponse.success(rooms);
+        return ApiResponse.success(payRoomService.findMyRooms(principal.getUserId()));
     }
 
     @GetMapping("/{roomId}")
-    public ApiResponse<PayRoomResponse> getRoom(@PathVariable Long roomId) {
-        PayRoomResponse room = payRoomService.findById(roomId);
-        return ApiResponse.success(room);
+    public ApiResponse<PayRoomResponse> getRoom(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal PrincipalUser principal
+    ) {
+        return ApiResponse.success(payRoomService.findById(roomId, principal.getUserId()));
     }
 
     @GetMapping("/{roomId}/members")
-    public ApiResponse<List<MemberInfo>> getMembers(@PathVariable Long roomId) {
-        List<MemberInfo> members = payRoomService.findMembers(roomId);
-        return ApiResponse.success(members);
+    public ApiResponse<List<MemberInfo>> getMembers(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal PrincipalUser principal
+    ) {
+        return ApiResponse.success(payRoomService.findMembers(roomId, principal.getUserId()));
     }
 
     @PostMapping
@@ -47,8 +50,7 @@ public class PayRoomApiController {
             @Valid @RequestBody PayRoomCreateRequest request,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        PayRoomResponse room = payRoomService.create(principal.getUserId(), request);
-        return ApiResponse.success(room);
+        return ApiResponse.success(payRoomService.create(principal.getUserId(), request));
     }
 
     @PutMapping("/{roomId}")
@@ -57,8 +59,7 @@ public class PayRoomApiController {
             @Valid @RequestBody PayRoomUpdateRequest request,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        PayRoomResponse room = payRoomService.update(roomId, principal.getUserId(), request);
-        return ApiResponse.success(room);
+        return ApiResponse.success(payRoomService.update(roomId, principal.getUserId(), request));
     }
 
     @PostMapping("/{roomId}/members")
@@ -76,8 +77,7 @@ public class PayRoomApiController {
             @PathVariable Long roomId,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        PayRoomResponse room = payRoomService.complete(roomId, principal.getUserId());
-        return ApiResponse.success(room);
+        return ApiResponse.success(payRoomService.complete(roomId, principal.getUserId()));
     }
 
     @PatchMapping("/{roomId}/reopen")
@@ -85,7 +85,6 @@ public class PayRoomApiController {
             @PathVariable Long roomId,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        PayRoomResponse room = payRoomService.reopen(roomId, principal.getUserId());
-        return ApiResponse.success(room);
+        return ApiResponse.success(payRoomService.reopen(roomId, principal.getUserId()));
     }
 }

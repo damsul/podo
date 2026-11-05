@@ -6,6 +6,7 @@ import com.podo.domain.payroom.dto.response.AccountResponse;
 import com.podo.domain.payroom.service.AccountService;
 import com.podo.global.common.ApiResponse;
 import com.podo.global.security.PrincipalUser;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,13 +24,16 @@ public class AccountApiController {
     public ApiResponse<AccountResponse> create(
             @PathVariable Long roomId,
             @AuthenticationPrincipal PrincipalUser principal,
-            @RequestBody AccountCreateRequest request) {
+            @Valid @RequestBody AccountCreateRequest request) {
         return ApiResponse.success(accountService.create(roomId, principal.getUserId(), request));
     }
 
     @GetMapping
-    public ApiResponse<List<AccountResponse>> findByRoom(@PathVariable Long roomId) {
-        return ApiResponse.success(accountService.findByRoom(roomId));
+    public ApiResponse<List<AccountResponse>> findByRoom(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal PrincipalUser principal
+    ) {
+        return ApiResponse.success(accountService.findByRoom(roomId, principal.getUserId()));
     }
 
     @PutMapping("/{accountId}")
@@ -37,9 +41,9 @@ public class AccountApiController {
             @PathVariable Long roomId,
             @PathVariable Long accountId,
             @AuthenticationPrincipal PrincipalUser principal,
-            @RequestBody AccountUpdateRequest request
+            @Valid @RequestBody AccountUpdateRequest request
     ) {
-        return ApiResponse.success(accountService.update(accountId, principal.getUserId(), request));
+        return ApiResponse.success(accountService.update(roomId, accountId, principal.getUserId(), request));
     }
 
     @DeleteMapping("/{accountId}")
@@ -48,7 +52,7 @@ public class AccountApiController {
             @PathVariable Long accountId,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        accountService.delete(accountId, principal.getUserId());
+        accountService.delete(roomId, accountId, principal.getUserId());
         return ApiResponse.success();
     }
 }
