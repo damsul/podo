@@ -28,7 +28,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
+        // Access 토큰만 인증에 사용 (Refresh 토큰은 재발급 API에서만 사용)
+        if (token != null && jwtTokenProvider.validateAccessToken(token)) {
             Long userId = jwtTokenProvider.getUserId(token);
 
             userRepository.findById(userId).ifPresent(user -> {
@@ -52,5 +53,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         return null;
     }
-
 }

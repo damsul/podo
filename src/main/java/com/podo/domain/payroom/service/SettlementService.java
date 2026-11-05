@@ -105,12 +105,12 @@ public class SettlementService {
         sb.append("'").append(payRoom.getTitle()).append("' 모임 정산 내용입니다.\n\n[정산내용]\n");
         for (NetTransferInfo t : settlement.getNetTransfers()) {
             sb.append(t.getFromUserName()).append("님은 ").append(t.getToUserName())
-                    .append("님에게 ").append(String.format("%,d", t.getAmount())).append("원 입급 부탁드립니다.\n");
+                    .append("님에게 ").append(String.format("%,d", t.getAmount())).append("원 입금 부탁드립니다.\n");
         }
         if (!accounts.isEmpty()) {
             sb.append("\n[계좌정보]\n");
             for (Account a : accounts) {
-                sb.append(a.getHolderName()).append("에게 보내실 분은")
+                sb.append(a.getHolderName()).append("에게 보내실 분은 ")
                         .append(a.getBank()).append(" ").append(a.getAccountNumber()).append("로 보내주세요.\n");
             }
         }
