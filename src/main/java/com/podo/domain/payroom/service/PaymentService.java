@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -57,10 +58,21 @@ public class PaymentService {
 
     public List<PaymentResponse> findByRoom(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
-        validateRoomMember(payRoom, findUserById(userId));
-        return paymentRepository.findByPayRoom(payRoom).stream()
-                .map(payment -> PaymentResponse.from(payment, participantRepository.findByPayment(payment)))
+        if (!roomMemberRepository.existsMember(roomId, userId)) {
+            throw new NotRoomMemberException();
+        }
+
+        List<Payment> payments = paymentRepository.findAllByPayRoomWithPayer(payRoom);
+        Map<Long, List<PaymentParticipant>> participantsByPayment = participantRepository.findGroupedByPayment(payments);
+
+        return payments.stream()
+                .map(p -> PaymentResponse.from(p, participantsByPayment.getOrDefault(p.getId(), List.of())))
                 .toList();
+
+//        validateRoomMember(payRoom, findUserById(userId));
+//        return paymentRepository.findByPayRoom(payRoom).stream()
+//                .map(payment -> PaymentResponse.from(payment, participantRepository.findByPayment(payment)))
+//                .toList();
     }
 
     public PaymentResponse findById(Long roomId, Long paymentId, Long userId) {

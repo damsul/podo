@@ -26,5 +26,17 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
             "ORDER BY pr.createdAt DESC")
     List<RoomMember> findAllByUserIdWithRoom(@Param("userId") Long userId);
 
-    User user(User user);
+    @Query("""
+            select rm from RoomMember rm
+            join fetch rm.user
+            where rm.payRoom = :payRoom
+            order by rm.id
+            """)
+    List<RoomMember> findAllByPayRoomWithUser(@Param("payRoom") PayRoom payRoom);
+
+    @Query("""
+            select count(rm) > 0 from RoomMember rm
+            where rm.payRoom.id = :roomId and rm.user.id = :userId
+            """)
+    boolean existsMember(@Param("roomId") Long roomId, @Param("userId") Long userId);
 }

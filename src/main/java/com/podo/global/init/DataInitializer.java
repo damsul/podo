@@ -224,6 +224,25 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
         }
 
+        // 쿼리 수 측정용: 결제 8건 추가 (총 10건)
+        for (int i = 1; i <= 8; i++) {
+            Payment extra = Payment.builder()
+                    .payRoom(mtRoom)
+                    .payer(i % 2 == 0 ? gyounghwan : minwook)
+                    .title("측정용 결제 " + i)
+                    .amount(10000 * i)
+                    .paidAt(LocalDate.of(2026, 5, 2))
+                    .build();
+            em.persist(extra);
+
+            for (User user : List.of(gyounghwan, minwook, juhwang, youngjun, sohyun)) {
+                em.persist(PaymentParticipant.builder()
+                        .payment(extra)
+                        .user(user)
+                        .build());
+            }
+        }
+
         log.info("💰 Podo MT 결제 2건 생성");
     }
 

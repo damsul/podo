@@ -1,8 +1,8 @@
 package com.podo.domain.payroom.service;
 
+import com.podo.domain.payroom.dto.response.AccountResponse;
 import com.podo.domain.payroom.dto.response.SettlementResponse;
 import com.podo.domain.payroom.dto.response.SettlementResponse.TransferInfo;
-import com.podo.domain.payroom.entity.Account;
 import com.podo.domain.payroom.entity.PayRoom;
 import com.podo.domain.payroom.entity.Payment;
 import com.podo.domain.payroom.entity.PaymentParticipant;
@@ -14,8 +14,6 @@ import com.podo.domain.payroom.repository.PaymentParticipantRepository;
 import com.podo.domain.payroom.repository.PaymentRepository;
 import com.podo.domain.payroom.repository.RoomMemberRepository;
 import com.podo.domain.user.entity.User;
-import com.podo.domain.user.exception.UserNotFoundException;
-import com.podo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,28 +33,31 @@ public class SettlementService {
     private final PayRoomRepository payRoomRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentParticipantRepository participantRepository;
-    private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final RoomMemberRepository roomMemberRepository;
 
     // 정산 결과는 저장하지 않고 요청할 때마다 계산 (방 멤버만 조회 가능)
     // 관리자 화면은 방장 id를 넘겨 호출하므로 이 검사를 통과한다
+    // 쿼리: 방 1 + 멤버 확인 1 + 결제(결제자 포함) 1 + 참여자(사용자 포함) 1 → 결제 수와 무관
     public SettlementResponse calculate(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
-        User currentUser = findUserById(userId);
-        validateRoomMember(payRoom, currentUser);
+        validateRoomMember(roomId, userId);
 
-        boolean isOwner = payRoom.isOwner(currentUser);
+        boolean isOwner = payRoom.getOwner().getId().equals(userId);
         int roundUnit = payRoom.getRoundUnit();
 
-        List<Payment> payments = paymentRepository.findByPayRoom(payRoom);
+        List<Payment> payments = paymentRepository.findAllByPayRoomWithPayer(payRoom);
+        Map<Long, List<PaymentParticipant>> participantsByPayment =
+                participantRepository.findGroupedByPayment(payments);
+
         List<TransferInfo> transfers = new ArrayList<>();
         Map<String, NetAccumulator> netMap = new LinkedHashMap<>();
         int totalAmount = 0;
 
         for (Payment payment : payments) {
             totalAmount += payment.getAmount();
-            List<PaymentParticipant> participants = participantRepository.findByPayment(payment);
+            List<PaymentParticipant> participants =
+                    participantsByPayment.getOrDefault(payment.getId(), List.of());
             User payer = payment.getPayer();
             if (participants.isEmpty()) continue;
 
@@ -104,21 +105,27 @@ public class SettlementService {
                 .build();
     }
 
-    // 공유 문구에는 계좌번호가 들어가므로 방 멤버만 생성 가능 (calculate에서 검사)
+    // API용: 정산 계산과 계좌 조회를 직접 해서 공유 문구를 만든다
     public String generateShareText(Long roomId, Long userId) {
         SettlementResponse settlement = calculate(roomId, userId);
-        PayRoom payRoom = findPayRoomById(roomId);
-        List<Account> accounts = accountRepository.findByPayRoom(payRoom);
+        List<AccountResponse> accounts = accountRepository.findAllByPayRoomWithUser(findPayRoomById(roomId)).stream()
+                .map(AccountResponse::from)
+                .toList();
+        return buildShareText(settlement, accounts);
+    }
 
+    // 화면용: 이미 계산한 정산 결과와 계좌로 문구만 만든다 (DB 조회 없음)
+    // 예전에는 정산 화면에서 calculate가 두 번 실행되던 것을 이걸로 한 번으로 줄였다
+    public String buildShareText(SettlementResponse settlement, List<AccountResponse> accounts) {
         StringBuilder sb = new StringBuilder();
-        sb.append("'").append(payRoom.getTitle()).append("' 모임 정산 내용입니다.\n\n[정산내용]\n");
+        sb.append("'").append(settlement.getRoomTitle()).append("' 모임 정산 내용입니다.\n\n[정산내용]\n");
         for (NetTransferInfo t : settlement.getNetTransfers()) {
             sb.append(t.getFromUserName()).append("님은 ").append(t.getToUserName())
                     .append("님에게 ").append(String.format("%,d", t.getAmount())).append("원 입금 부탁드립니다.\n");
         }
         if (!accounts.isEmpty()) {
             sb.append("\n[계좌정보]\n");
-            for (Account a : accounts) {
+            for (AccountResponse a : accounts) {
                 sb.append(a.getHolderName()).append("에게 보내실 분은 ")
                         .append(a.getBank()).append(" ").append(a.getAccountNumber()).append("로 보내주세요.\n");
             }
@@ -126,18 +133,14 @@ public class SettlementService {
         return sb.toString();
     }
 
-    private User findUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
-    }
-
     private PayRoom findPayRoomById(Long roomId) {
         return payRoomRepository.findById(roomId)
                 .orElseThrow(() -> new PayRoomNotFoundException(roomId));
     }
 
-    private void validateRoomMember(PayRoom payRoom, User user) {
-        if (!roomMemberRepository.existsByPayRoomAndUser(payRoom, user)) {
+    // 사용자 엔티티를 불러오지 않고 id만으로 멤버 여부 확인
+    private void validateRoomMember(Long roomId, Long userId) {
+        if (!roomMemberRepository.existsMember(roomId, userId)) {
             throw new NotRoomMemberException();
         }
     }

@@ -52,11 +52,18 @@ public class AccountService {
     // 계좌번호는 민감 정보라 방 멤버만 조회 가능
     public List<AccountResponse> findByRoom(Long roomId, Long currentUserId) {
         PayRoom payRoom = findPayRoomById(roomId);
-        validateRoomMember(payRoom, findUserById(currentUserId));
+        if (!roomMemberRepository.existsMember(roomId, currentUserId)) {
+            throw new NotRoomMemberException();
+        }
 
-        return accountRepository.findByPayRoom(payRoom).stream()
+        return accountRepository.findAllByPayRoomWithUser(payRoom).stream()
                 .map(AccountResponse::from)
                 .toList();
+
+//        validateRoomMember(payRoom, findUserById(currentUserId));
+//        return accountRepository.findByPayRoom(payRoom).stream()
+//                .map(AccountResponse::from)
+//                .toList();
     }
 
     @Transactional

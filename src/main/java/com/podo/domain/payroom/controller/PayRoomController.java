@@ -4,8 +4,8 @@ import com.podo.domain.payroom.dto.request.AddMemberRequest;
 import com.podo.domain.payroom.dto.request.PayRoomCreateRequest;
 import com.podo.domain.payroom.dto.response.*;
 import com.podo.domain.payroom.service.AccountService;
+import com.podo.domain.payroom.service.PayRoomDetailService;
 import com.podo.domain.payroom.service.PayRoomService;
-import com.podo.domain.payroom.service.PaymentService;
 import com.podo.domain.payroom.service.SettlementService;
 import com.podo.global.security.PrincipalUser;
 import com.podo.global.exception.BusinessException;
@@ -30,7 +30,7 @@ import static com.podo.domain.payroom.dto.response.SettlementResponse.*;
 public class PayRoomController {
 
     private final PayRoomService payRoomService;
-    private final PaymentService paymentService;
+    private final PayRoomDetailService payRoomDetailService;
     private final SettlementService settlementService;
     private final AccountService accountService;
 
@@ -48,8 +48,7 @@ public class PayRoomController {
             return "room/form";
         }
 
-        Long userId = principal.getUserId();
-        payRoomService.create(userId, request);
+        payRoomService.create(principal.getUserId(), request);
 
         return "redirect:/";
     }
@@ -60,19 +59,14 @@ public class PayRoomController {
                          Model model) {
         Long userId = principal.getUserId();
 
-        // 각 서비스가 방 멤버인지 확인한다 (멤버가 아니면 NotRoomMemberException → 403)
-        PayRoomResponse room = payRoomService.findById(roomId, userId);
-        List<MemberInfo> members = payRoomService.findMembers(roomId, userId);
-        List<PaymentResponse> payments = paymentService.findByRoom(roomId, userId);
-        List<AccountResponse> accounts = accountService.findByRoom(roomId, userId);
+        // 화면 전용 조회 서비스 한 번 호출 (멤버 확인 1회, 결제 수와 무관하게 쿼리 수 고정)
+        PayRoomDetailResponse detail = payRoomDetailService.getDetail(roomId, userId);
 
-        boolean isOwner = room.getOwnerId().equals(userId);
-
-        model.addAttribute("room", room);
-        model.addAttribute("members", members);
-        model.addAttribute("payments", payments);
-        model.addAttribute("accounts", accounts);
-        model.addAttribute("isOwner", isOwner);
+        model.addAttribute("room", detail.getRoom());
+        model.addAttribute("members", detail.getMembers());
+        model.addAttribute("payments", detail.getPayments());
+        model.addAttribute("accounts", detail.getAccounts());
+        model.addAttribute("isOwner", detail.isOwner());
         model.addAttribute("currentUserId", userId);
 
         return "room/detail";
@@ -85,15 +79,16 @@ public class PayRoomController {
         Long userId = principal.getUserId();
 
         SettlementResponse settlement = settlementService.calculate(roomId, userId);
+        List<AccountResponse> accounts = accountService.findByRoom(roomId, userId);
+        // 이미 계산한 결과로 공유 문구만 만든다 (정산을 다시 계산하지 않음)
+        String shareText = settlementService.buildShareText(settlement, accounts);
+
         LinkedHashMap<String, List<TransferInfo>> grouped = settlement.getTransfers().stream()
                 .collect(Collectors.groupingBy(
                         TransferInfo::getPaymentTitle,
                         LinkedHashMap::new,
                         Collectors.toList()
                 ));
-
-        String shareText = settlementService.generateShareText(roomId, userId);
-        List<AccountResponse> accounts = accountService.findByRoom(roomId, userId);
 
         model.addAttribute("settlement", settlement);
         model.addAttribute("groupedTransfers", grouped);
