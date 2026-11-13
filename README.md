@@ -186,17 +186,18 @@ flowchart LR
 
 ```
 src/main/java/com/podo
-├── api          # REST API 컨트롤러 (/api/**)
-├── domain       # 도메인별 entity · repository · service · controller · dto
-│   ├── payroom  #   정산방, 멤버, 결제, 참여자, 계좌, 정산
-│   ├── user     #   회원, 마이페이지, 관리자 회원 관리
-│   └── ...      #   공지, FAQ, 1:1 문의, 관리자 화면
-└── global       # 공통 설정
-    ├── config   #   Spring Security 등 설정
-    ├── security #   JWT, OAuth2, 인증 실패 처리
-    ├── exception#   ErrorCode, 예외 핸들러
-    ├── storage  #   S3 프로필 이미지 저장소
-    └── common   #   ApiResponse, BaseEntity
+├── api           # REST API 컨트롤러 (/api/**)
+├── domain        # 도메인별 entity · repository · service · controller · dto
+│   ├── payroom   #   정산방, 멤버, 결제, 참여자, 계좌, 정산
+│   ├── user      #   회원, 마이페이지, 관리자 회원 관리
+│   ├── cs        #   공지사항, FAQ, 1:1 문의
+│   └── admin     #   관리자 화면
+└── global        # 공통 설정
+    ├── config    #   Spring Security 등 설정
+    ├── security  #   JWT, OAuth2, 인증 실패 처리
+    ├── exception #   ErrorCode, 예외 핸들러
+    ├── storage   #   S3 프로필 이미지 저장소
+    └── common    #   ApiResponse, BaseEntity
 ```
 
 <br>
