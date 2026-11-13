@@ -5,6 +5,7 @@ import com.podo.domain.user.dto.response.TokenResponse;
 import com.podo.domain.user.entity.RefreshToken;
 import com.podo.domain.user.exception.InvalidRefreshTokenException;
 import com.podo.domain.user.repository.RefreshTokenRepository;
+import com.podo.domain.user.repository.UserRepository;
 import com.podo.global.security.from.CustomUserDetails;
 import com.podo.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
 
     // 로그인: 아이디·비밀번호 확인 후 Access + Refresh 발급, Refresh는 사용자당 1개만 저장
     @Transactional
@@ -53,6 +55,13 @@ public class AuthService {
         }
 
         Long userId = jwtTokenProvider.getUserId(oldRefreshToken);
+
+        boolean active = userRepository.findById(userId)
+                .map(user -> !user.isDeleted())
+                .orElse(false);
+        if (!active) {
+            throw new InvalidRefreshTokenException();
+        }
 
         RefreshToken savedToken = refreshTokenRepository.findByUserId(userId)
                 .orElseThrow(InvalidRefreshTokenException::new);

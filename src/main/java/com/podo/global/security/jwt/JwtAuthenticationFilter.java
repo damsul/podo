@@ -32,7 +32,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && jwtTokenProvider.validateAccessToken(token)) {
             Long userId = jwtTokenProvider.getUserId(token);
 
-            userRepository.findById(userId).ifPresent(user -> {
+            userRepository.findById(userId)
+                    .filter(user -> !user.isDeleted())
+                    .ifPresent(user -> {
                 CustomUserDetails principal = new CustomUserDetails(user);
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
