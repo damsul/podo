@@ -56,6 +56,9 @@ public class Inquiry extends BaseEntity {
     }
 
     public void updateContent(String title, String content) {
+        if (isAnswered()) {
+            throw new IllegalStateException("답변이 완료된 문의는 수정할 수 없습니다");
+        }
         this.title = title;
         this.content = content;
     }

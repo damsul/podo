@@ -7,9 +7,12 @@ import com.podo.domain.payroom.entity.PayRoom;
 import com.podo.domain.payroom.entity.RoomMember;
 import com.podo.domain.payroom.entity.RoomStatus;
 import com.podo.domain.payroom.exception.AlreadyRoomMemberException;
+import com.podo.domain.payroom.exception.NotRoomMemberException;
 import com.podo.domain.payroom.exception.NotRoomOwnerException;
 import com.podo.domain.payroom.exception.PayRoomNotFoundException;
+import com.podo.domain.payroom.repository.AccountRepository;
 import com.podo.domain.payroom.repository.PayRoomRepository;
+import com.podo.domain.payroom.repository.PaymentRepository;
 import com.podo.domain.payroom.repository.RoomMemberRepository;
 import com.podo.domain.user.entity.User;
 import com.podo.domain.user.exception.UserNotFoundException;
@@ -44,6 +47,12 @@ class PayRoomServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PaymentRepository paymentRepository;   // 관리자 상세용 (이 테스트에선 사용 안 함)
+
+    @Mock
+    private AccountRepository accountRepository;   // 관리자 상세용 (이 테스트에선 사용 안 함)
 
     @InjectMocks
     private PayRoomService payRoomService;
@@ -116,11 +125,13 @@ class PayRoomServiceTest {
     class FindRoom {
 
         @Test
-        @DisplayName("ID로 방을 조회한다")
+        @DisplayName("방 멤버는 ID로 방을 조회할 수 있다")
         void findById_success() {
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+            given(roomMemberRepository.existsByPayRoomAndUser(payRoom, owner)).willReturn(true);
 
-            PayRoomResponse response = payRoomService.findById(10L);
+            PayRoomResponse response = payRoomService.findById(10L, 1L);
 
             assertThat(response.getId()).isEqualTo(10L);
             assertThat(response.getTitle()).isEqualTo("Podo MT");
@@ -131,9 +142,33 @@ class PayRoomServiceTest {
         void findById_notFound() {
             given(payRoomRepository.findById(999L)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> payRoomService.findById(999L))
+            assertThatThrownBy(() -> payRoomService.findById(999L, 1L))
                     .isInstanceOf(PayRoomNotFoundException.class)
                     .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("방 멤버가 아니면 방을 조회할 수 없다 (NotRoomMemberException)")
+        void findById_byNonMember_throwsException() {
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(2L)).willReturn(Optional.of(otherUser));
+            given(roomMemberRepository.existsByPayRoomAndUser(payRoom, otherUser)).willReturn(false);
+
+            assertThatThrownBy(() -> payRoomService.findById(10L, 2L))
+                    .isInstanceOf(NotRoomMemberException.class);
+        }
+
+        @Test
+        @DisplayName("방 멤버가 아니면 멤버 목록도 볼 수 없다")
+        void findMembers_byNonMember_throwsException() {
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(2L)).willReturn(Optional.of(otherUser));
+            given(roomMemberRepository.existsByPayRoomAndUser(payRoom, otherUser)).willReturn(false);
+
+            assertThatThrownBy(() -> payRoomService.findMembers(10L, 2L))
+                    .isInstanceOf(NotRoomMemberException.class);
+
+            verify(roomMemberRepository, never()).findByPayRoom(any());
         }
 
         @Test

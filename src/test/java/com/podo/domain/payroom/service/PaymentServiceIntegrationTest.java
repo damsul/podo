@@ -1,13 +1,13 @@
 package com.podo.domain.payroom.service;
 
 import com.podo.domain.payroom.dto.request.PaymentCreateRequest;
-import com.podo.domain.payroom.dto.response.PaymentResponse;
 import com.podo.domain.payroom.dto.request.PaymentUpdateRequest;
+import com.podo.domain.payroom.dto.response.PaymentResponse;
 import com.podo.domain.payroom.entity.PayRoom;
 import com.podo.domain.payroom.entity.Payment;
 import com.podo.domain.payroom.entity.PaymentParticipant;
 import com.podo.domain.payroom.entity.RoomMember;
-import com.podo.domain.payroom.exception.NotRoomMemberException;
+import com.podo.domain.payroom.exception.*;
 import com.podo.domain.payroom.repository.PayRoomRepository;
 import com.podo.domain.payroom.repository.PaymentParticipantRepository;
 import com.podo.domain.payroom.repository.PaymentRepository;
@@ -17,6 +17,7 @@ import com.podo.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,164 +30,208 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * PaymentService 통합 테스트 (H2 + 실제 JPA)
+ * - 저장·수정·삭제·정산 체크가 실제 DB에 어떻게 반영되는지 확인한다.
+ * - em.flush() + em.clear() 후 다시 조회해서 "메모리 값"이 아니라 "DB 값"을 검증한다.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class PaymentServiceIntegrationTest {
+class PaymentServiceIntegrationTest {
 
-    @Autowired
-    private PaymentService paymentService;
-
-    @Autowired
-    private PaymentRepository paymentRepository;
-
-    @Autowired
-    private PaymentParticipantRepository participantRepository;
-
-    @Autowired
-    private PayRoomRepository payRoomRepository;
-
-    @Autowired
-    private RoomMemberRepository roomMemberRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private EntityManager em;
+    @Autowired private PaymentService paymentService;
+    @Autowired private PaymentRepository paymentRepository;
+    @Autowired private PaymentParticipantRepository participantRepository;
+    @Autowired private PayRoomRepository payRoomRepository;
+    @Autowired private RoomMemberRepository roomMemberRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private EntityManager em;
 
     private User owner;
     private User member1;
     private User member2;
-    private User nonMember;
+    private User outsider;
     private PayRoom payRoom;
+    private PayRoom otherRoom;   // 같은 방장이 만든 다른 방
 
     @BeforeEach
     void setUp() {
-        owner = userRepository.save(User.builder()
-                .loginId("pien").name("최경환").build());
-        member1 = userRepository.save(User.builder()
-                .loginId("minwook").name("이민욱").build());
-        member2 = userRepository.save(User.builder()
-                .loginId("orange").name("박주황").build());
-        nonMember = userRepository.save(User.builder()
-                .loginId("outsider").name("외부인").build());
+        owner = userRepository.save(User.builder().loginId("pien").name("최경환").build());
+        member1 = userRepository.save(User.builder().loginId("minwook").name("이민욱").build());
+        member2 = userRepository.save(User.builder().loginId("orange").name("박주황").build());
+        outsider = userRepository.save(User.builder().loginId("outsider").name("외부인").build());
 
-        payRoom = payRoomRepository.save(PayRoom.builder()
-                .owner(owner).title("Podo MT").build());
+        payRoom = payRoomRepository.save(PayRoom.builder().owner(owner).title("Podo MT").build());
+        addMembers(payRoom, owner, member1, member2);
 
-        roomMemberRepository.save(RoomMember.builder().payRoom(payRoom).user(owner).build());
-        roomMemberRepository.save(RoomMember.builder().payRoom(payRoom).user(member1).build());
-        roomMemberRepository.save(RoomMember.builder().payRoom(payRoom).user(member2).build());
+        otherRoom = payRoomRepository.save(PayRoom.builder().owner(owner).title("다른 방").build());
+        addMembers(otherRoom, owner, member1);
     }
 
-    @Test
-    @DisplayName("결제 항목 추가 시 Payment와 참여자들이 모두 DB에 저장된다")
-    void create_realDB() {
-        PaymentCreateRequest request = PaymentCreateRequest.builder()
-                .title("장보기")
-                .amount(80000)
-                .paidAt(LocalDate.of(2026, 5, 1))
-                .payerId(owner.getId())
-                .participantIds(List.of(owner.getId(), member1.getId(), member2.getId()))
-                .build();
+    @Nested
+    @DisplayName("결제 추가·수정·삭제")
+    class Crud {
 
-        PaymentResponse response = paymentService.create(payRoom.getId(), owner.getId(), request);
+        @Test
+        @DisplayName("결제를 추가하면 결제와 참여자가 모두 저장되고, 참여자는 미정산으로 시작한다")
+        void create_savesPaymentAndParticipants() {
+            PaymentResponse response = createPayment(payRoom, owner, 80000, owner, member1, member2);
 
-        Payment savedPayment = paymentRepository.findById(response.getId()).orElseThrow();
-        assertThat(savedPayment.getTitle()).isEqualTo("장보기");
-        assertThat(savedPayment.getAmount()).isEqualTo(80000);
+            flushAndClear();
+            Payment saved = paymentRepository.findById(response.getId()).orElseThrow();
+            List<PaymentParticipant> participants = participantRepository.findByPayment(saved);
 
-        List<PaymentParticipant> participants =
-                participantRepository.findByPayment(savedPayment);
-        assertThat(participants).hasSize(3);
-        assertThat(participants).extracting(pp -> pp.getUser().getName())
-                .containsExactlyInAnyOrder("최경환", "이민욱", "박주황");
+            assertThat(saved.getTitle()).isEqualTo("장보기");
+            assertThat(saved.getAmount()).isEqualTo(80000);
+            assertThat(participants).hasSize(3)
+                    .allMatch(pp -> !pp.isSettled())
+                    .extracting(pp -> pp.getUser().getName())
+                    .containsExactlyInAnyOrder("최경환", "이민욱", "박주황");
+        }
 
-        assertThat(participants).allMatch(pp -> !pp.isSettled());
+        @Test
+        @DisplayName("외부인을 참여자로 넣으면 NotRoomMemberException")
+        void create_withOutsider_throwsException() {
+            assertThatThrownBy(() -> createPayment(payRoom, owner, 80000, owner, outsider))
+                    .isInstanceOf(NotRoomMemberException.class);
+        }
+
+        @Test
+        @DisplayName("수정하면 기존 참여자가 모두 새 참여자로 바뀐다")
+        void update_replacesParticipants() {
+            PaymentResponse created = createPayment(payRoom, owner, 80000, owner, member1, member2);
+
+            paymentService.update(payRoom.getId(), created.getId(), owner.getId(),
+                    PaymentUpdateRequest.builder()
+                            .title("장보기 (수정)").amount(70000).paidAt(LocalDate.of(2026, 5, 2))
+                            .payerId(owner.getId())
+                            .participantIds(List.of(owner.getId(), member1.getId()))
+                            .build());
+
+            flushAndClear();
+            Payment updated = paymentRepository.findById(created.getId()).orElseThrow();
+            assertThat(updated.getTitle()).isEqualTo("장보기 (수정)");
+            assertThat(updated.getAmount()).isEqualTo(70000);
+            assertThat(participantRepository.findByPayment(updated))
+                    .extracting(pp -> pp.getUser().getName())
+                    .containsExactlyInAnyOrder("최경환", "이민욱");
+        }
+
+        @Test
+        @DisplayName("다른 방의 결제 id로 수정하면 PaymentNotFoundException (방장이 같아도)")
+        void update_paymentOfOtherRoom_throwsException() {
+            PaymentResponse otherPayment = createPayment(otherRoom, owner, 10000, owner, member1);
+
+            assertThatThrownBy(() -> paymentService.update(payRoom.getId(), otherPayment.getId(), owner.getId(),
+                    PaymentUpdateRequest.builder()
+                            .title("수정").amount(1000).payerId(owner.getId())
+                            .participantIds(List.of(owner.getId()))
+                            .build()))
+                    .isInstanceOf(PaymentNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("삭제하면 참여자도 함께 삭제된다")
+        void delete_alsoDeletesParticipants() {
+            PaymentResponse created = createPayment(payRoom, owner, 80000, owner, member1);
+
+            paymentService.delete(payRoom.getId(), created.getId(), owner.getId());
+
+            flushAndClear();
+            assertThat(paymentRepository.findById(created.getId())).isEmpty();
+            assertThat(participantRepository.count()).isZero();
+        }
+
+        @Test
+        @DisplayName("방 멤버가 아니면 결제 목록을 볼 수 없다")
+        void findByRoom_byOutsider_throwsException() {
+            assertThatThrownBy(() -> paymentService.findByRoom(payRoom.getId(), outsider.getId()))
+                    .isInstanceOf(NotRoomMemberException.class);
+        }
     }
 
-    @Test
-    @DisplayName("외부인을 참여자로 추가하면 예외 발생 + DB에 아무것도 저장되지 않는다 (트랜잭션 롤백)")
-    void create_withNonMember_rollback() {
-        PaymentCreateRequest request = PaymentCreateRequest.builder()
-                .title("장보기")
-                .amount(80000)
-                .payerId(owner.getId())
-                .participantIds(List.of(owner.getId(), member1.getId(), nonMember.getId()))
-                .build();
+    @Nested
+    @DisplayName("정산 체크")
+    class SettleCheck {
 
-        assertThatThrownBy(() -> paymentService.create(payRoom.getId(), owner.getId(), request))
-                .isInstanceOf(NotRoomMemberException.class);
+        @Test
+        @DisplayName("방장이 정산 완료·취소하면 DB에 반영된다")
+        void settleAndUnsettle_byOwner() {
+            Long ppId = firstOtherParticipantId(createPayment(payRoom, owner, 80000, owner, member1));
+
+            paymentService.markAsSettled(payRoom.getId(), ppId, owner.getId());
+            flushAndClear();
+            assertThat(participantRepository.findById(ppId).orElseThrow().isSettled()).isTrue();
+
+            paymentService.markAsUnsettled(payRoom.getId(), ppId, owner.getId());
+            flushAndClear();
+            assertThat(participantRepository.findById(ppId).orElseThrow().isSettled()).isFalse();
+        }
+
+        @Test
+        @DisplayName("방장이 아니면 정산 체크할 수 없다 (NotRoomOwnerException)")
+        void settle_byMember_throwsException() {
+            Long ppId = firstOtherParticipantId(createPayment(payRoom, owner, 80000, owner, member1));
+
+            assertThatThrownBy(() -> paymentService.markAsSettled(payRoom.getId(), ppId, member1.getId()))
+                    .isInstanceOf(NotRoomOwnerException.class);
+        }
+
+        @Test
+        @DisplayName("URL의 방과 다른 방의 참여자 id면 ParticipantNotFoundException (방장이 같아도)")
+        void settle_participantOfOtherRoom_throwsException() {
+            Long otherPpId = firstOtherParticipantId(createPayment(otherRoom, owner, 10000, owner, member1));
+
+            assertThatThrownBy(() -> paymentService.markAsSettled(payRoom.getId(), otherPpId, owner.getId()))
+                    .isInstanceOf(ParticipantNotFoundException.class);
+            assertThat(participantRepository.findById(otherPpId).orElseThrow().isSettled()).isFalse();
+        }
+
+        @Test
+        @DisplayName("묶음 정산에 다른 방 참여자가 섞이면 아무것도 바뀌지 않는다")
+        void settleGroup_mixedRoom_changesNothing() {
+            Long myPpId = firstOtherParticipantId(createPayment(payRoom, owner, 80000, owner, member1));
+            Long otherPpId = firstOtherParticipantId(createPayment(otherRoom, owner, 10000, owner, member1));
+
+            assertThatThrownBy(() -> paymentService.markGroupAsSettled(
+                    payRoom.getId(), List.of(myPpId, otherPpId), owner.getId()))
+                    .isInstanceOf(ParticipantNotFoundException.class);
+
+            assertThat(participantRepository.findById(myPpId).orElseThrow().isSettled()).isFalse();
+            assertThat(participantRepository.findById(otherPpId).orElseThrow().isSettled()).isFalse();
+        }
     }
 
-    @Test
-    @DisplayName("결제 항목 수정 시 기존 참여자가 모두 새 참여자로 교체된다")
-    void update_replacesParticipants() {
-        PaymentResponse created = paymentService.create(payRoom.getId(), owner.getId(),
-                PaymentCreateRequest.builder()
-                        .title("장보기")
-                        .amount(80000)
-                        .payerId(owner.getId())
-                        .participantIds(List.of(owner.getId(), member1.getId(), member2.getId()))
-                        .build());
+    // === 테스트 헬퍼 === //
 
-        paymentService.update(created.getId(), owner.getId(),
-                PaymentUpdateRequest.builder()
-                        .title("장보기 (수정)")
-                        .amount(70000)
-                        .payerId(owner.getId())
-                        .participantIds(List.of(owner.getId(), member1.getId()))
-                        .build());
-
-        Payment updated = paymentRepository.findById(created.getId()).orElseThrow();
-        assertThat(updated.getTitle()).isEqualTo("장보기 (수정)");
-        assertThat(updated.getAmount()).isEqualTo(70000);
-
-        List<PaymentParticipant> participants =
-                participantRepository.findByPayment(updated);
-        assertThat(participants).hasSize(2);
-        assertThat(participants).extracting(pp -> pp.getUser().getName())
-                .containsExactlyInAnyOrder("최경환", "이민욱");
+    private void addMembers(PayRoom room, User... users) {
+        for (User u : users) {
+            roomMemberRepository.save(RoomMember.builder().payRoom(room).user(u).build());
+        }
     }
 
-    @Test
-    @DisplayName("결제 항목 삭제 시 참여자도 모두 함께 삭제된다")
-    void delete_cascade() {
-        PaymentResponse created = paymentService.create(payRoom.getId(), owner.getId(),
-                PaymentCreateRequest.builder()
-                        .title("장보기").amount(80000).payerId(owner.getId())
-                        .participantIds(List.of(owner.getId(), member1.getId()))
-                        .build());
-
-        paymentService.delete(created.getId(), owner.getId());
-
-        assertThat(paymentRepository.findById(created.getId())).isEmpty();
-
-        long participantCount = participantRepository.count();
-        assertThat(participantCount).isZero();
+    private PaymentResponse createPayment(PayRoom room, User payer, int amount, User... participants) {
+        return paymentService.create(room.getId(), payer.getId(), PaymentCreateRequest.builder()
+                .title("장보기").amount(amount).paidAt(LocalDate.of(2026, 5, 1))
+                .payerId(payer.getId())
+                .participantIds(java.util.Arrays.stream(participants).map(User::getId).toList())
+                .build());
     }
 
-    @Test
-    @DisplayName("정산 토글이 DB에 반영된다")
-    void settlementToggle_realDB() {
-        PaymentResponse created = paymentService.create(payRoom.getId(), owner.getId(),
-                PaymentCreateRequest.builder()
-                        .title("장보기").amount(80000).payerId(owner.getId())
-                        .participantIds(List.of(owner.getId(), member1.getId()))
-                        .build());
+    /** 결제자가 아닌 첫 번째 참여자의 id (정산 체크 대상) */
+    private Long firstOtherParticipantId(PaymentResponse response) {
+        Payment payment = paymentRepository.findById(response.getId()).orElseThrow();
+        Long payerId = payment.getPayer().getId();
+        return participantRepository.findByPayment(payment).stream()
+                .filter(pp -> !pp.getUser().getId().equals(payerId))
+                .findFirst()
+                .orElseThrow()
+                .getId();
+    }
 
-        Payment savedPayment = paymentRepository.findById(created.getId()).orElseThrow();
-        PaymentParticipant pp = participantRepository.findByPayment(savedPayment).get(0);
-
-        paymentService.markAsSettled(pp.getId(), owner.getId());
-
-        PaymentParticipant reloaded = participantRepository.findById(pp.getId()).orElseThrow();
-        assertThat(reloaded.isSettled()).isTrue();
-
-        paymentService.markAsUnsettled(pp.getId(), owner.getId());
-
-        PaymentParticipant reloaded2 = participantRepository.findById(pp.getId()).orElseThrow();
-        assertThat(reloaded2.isSettled()).isFalse();
+    private void flushAndClear() {
+        em.flush();
+        em.clear();
     }
 }

@@ -73,7 +73,7 @@ public class InquiryService {
 
     public Page<AdminInquiryListResponse> findAllForAdmin(InquiryStatus status, String keyword, Pageable pageable) {
         String trimmedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return inquiryRepository.searchForAdmin(status, keyword, pageable)
+        return inquiryRepository.searchForAdmin(status, trimmedKeyword, pageable)
                 .map(AdminInquiryListResponse::from);
     }
 

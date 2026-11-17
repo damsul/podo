@@ -56,6 +56,7 @@ public class PaymentService {
         return PaymentResponse.from(payment, participants);
     }
 
+    // 쿼리: 방 1 + 멤버 확인 1 + 결제(결제자 포함) 1 + 참여자(사용자 포함) 1 → 결제 수와 무관
     public List<PaymentResponse> findByRoom(Long roomId, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);
         if (!roomMemberRepository.existsMember(roomId, userId)) {
@@ -68,11 +69,6 @@ public class PaymentService {
         return payments.stream()
                 .map(p -> PaymentResponse.from(p, participantsByPayment.getOrDefault(p.getId(), List.of())))
                 .toList();
-
-//        validateRoomMember(payRoom, findUserById(userId));
-//        return paymentRepository.findByPayRoom(payRoom).stream()
-//                .map(payment -> PaymentResponse.from(payment, participantRepository.findByPayment(payment)))
-//                .toList();
     }
 
     public PaymentResponse findById(Long roomId, Long paymentId, Long userId) {
@@ -117,48 +113,49 @@ public class PaymentService {
         paymentRepository.delete(payment);
     }
 
+    // ===== 정산 체크 (방장만, URL의 방에 속한 참여자만) =====
+
     @Transactional
-    public void markAsSettled(Long participantId, Long userId) {
+    public void markAsSettled(Long roomId, Long participantId, Long userId) {
+        findParticipantsForOwner(roomId, List.of(participantId), userId)
+                .forEach(PaymentParticipant::markAsSettled);
+    }
+
+    @Transactional
+    public void markAsUnsettled(Long roomId, Long participantId, Long userId) {
+        findParticipantsForOwner(roomId, List.of(participantId), userId)
+                .forEach(PaymentParticipant::markAsUnsettled);
+    }
+
+    @Transactional
+    public void markGroupAsSettled(Long roomId, List<Long> participantIds, Long userId) {
+        findParticipantsForOwner(roomId, participantIds, userId)
+                .forEach(PaymentParticipant::markAsSettled);
+    }
+
+    @Transactional
+    public void markGroupAsUnsettled(Long roomId, List<Long> participantIds, Long userId) {
+        findParticipantsForOwner(roomId, participantIds, userId)
+                .forEach(PaymentParticipant::markAsUnsettled);
+    }
+
+    // 방장 확인을 먼저 하고, 참여자를 "전부" 확인한 뒤에 돌려준다.
+    // 하나라도 다른 방 참여자면 아무것도 바꾸지 않고 예외 (일부만 바뀌는 상황 방지)
+    private List<PaymentParticipant> findParticipantsForOwner(Long roomId, List<Long> participantIds, Long userId) {
+        validateOwner(findPayRoomById(roomId), findUserById(userId));
+        return participantIds.stream()
+                .map(id -> findParticipantInRoom(roomId, id))
+                .toList();
+    }
+
+    // 다른 방의 참여자 id를 넣으면 "없는 참여자"로 처리 (findPaymentInRoom과 같은 방식, 404)
+    private PaymentParticipant findParticipantInRoom(Long roomId, Long participantId) {
         PaymentParticipant pp = participantRepository.findById(participantId)
                 .orElseThrow(() -> new ParticipantNotFoundException(participantId));
-
-        User currentUser = findUserById(userId);
-        validateOwner(pp.getPayment().getPayRoom(), currentUser);
-
-        pp.markAsSettled();
-    }
-
-    @Transactional
-    public void markAsUnsettled(Long participantId, Long userId) {
-        PaymentParticipant pp = participantRepository.findById(participantId)
-                .orElseThrow(() -> new ParticipantNotFoundException(participantId));
-
-        User currentUser = findUserById(userId);
-        validateOwner(pp.getPayment().getPayRoom(), currentUser);
-
-        pp.markAsUnsettled();
-    }
-
-    @Transactional
-    public void markGroupAsSettled(List<Long> participantIds, Long userId) {
-        User currentUser = findUserById(userId);
-        for (Long id : participantIds) {
-            PaymentParticipant pp = participantRepository.findById(id)
-                    .orElseThrow(() -> new ParticipantNotFoundException(id));
-            validateOwner(pp.getPayment().getPayRoom(), currentUser);
-            pp.markAsSettled();
+        if (!pp.getPayment().getPayRoom().getId().equals(roomId)) {
+            throw new ParticipantNotFoundException(participantId);
         }
-    }
-
-    @Transactional
-    public void markGroupAsUnsettled(List<Long> participantIds, Long userId) {
-        User currentUser = findUserById(userId);
-        for (Long id : participantIds) {
-            PaymentParticipant pp = participantRepository.findById(id)
-                    .orElseThrow(() -> new ParticipantNotFoundException(id));
-            validateOwner(pp.getPayment().getPayRoom(), currentUser);
-            pp.markAsUnsettled();
-        }
+        return pp;
     }
 
     private User findUserById(Long userId) {

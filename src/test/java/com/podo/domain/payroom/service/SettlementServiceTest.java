@@ -1,45 +1,58 @@
 package com.podo.domain.payroom.service;
 
 import com.podo.domain.payroom.dto.response.SettlementResponse;
+import com.podo.domain.payroom.dto.response.SettlementResponse.NetTransferInfo;
 import com.podo.domain.payroom.dto.response.SettlementResponse.TransferInfo;
 import com.podo.domain.payroom.entity.PayRoom;
 import com.podo.domain.payroom.entity.Payment;
 import com.podo.domain.payroom.entity.PaymentParticipant;
+import com.podo.domain.payroom.exception.NotRoomMemberException;
 import com.podo.domain.payroom.exception.PayRoomNotFoundException;
+import com.podo.domain.payroom.repository.AccountRepository;
 import com.podo.domain.payroom.repository.PayRoomRepository;
 import com.podo.domain.payroom.repository.PaymentParticipantRepository;
 import com.podo.domain.payroom.repository.PaymentRepository;
+import com.podo.domain.payroom.repository.RoomMemberRepository;
 import com.podo.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.*;
 
+/**
+ * SettlementService 단위 테스트 (Mock)
+ * - 정산 "계산 규칙"(균등 분할, 결제자 제외, 절사, 같은 사람끼리 합산)을 빠르게 검증한다.
+ * - 조회는 결제 목록 1번 + 참여자 묶음 1번(findGroupedByPayment)으로 바뀌었으므로 그 두 개만 흉내 낸다.
+ */
 @ExtendWith(MockitoExtension.class)
 class SettlementServiceTest {
 
-    @Mock
-    private PayRoomRepository payRoomRepository;
-
-    @Mock
-    private PaymentRepository paymentRepository;
-
-    @Mock
-    private PaymentParticipantRepository participantRepository;
+    @Mock private PayRoomRepository payRoomRepository;
+    @Mock private PaymentRepository paymentRepository;
+    @Mock private PaymentParticipantRepository participantRepository;
+    @Mock private AccountRepository accountRepository;
+    @Mock private RoomMemberRepository roomMemberRepository;
 
     @InjectMocks
     private SettlementService settlementService;
+
+    private static final Long ROOM_ID = 10L;
+    private static final Long OWNER_ID = 1L;
 
     private User gyounghwan;
     private User minwook;
@@ -48,348 +61,251 @@ class SettlementServiceTest {
     private User sohyun;
     private PayRoom payRoom;
 
+    private long nextParticipantId = 1L;
+
     @BeforeEach
     void setUp() {
-        gyounghwan = createUserWithId(1L, "경환");
-        minwook = createUserWithId(2L, "민욱");
-        juhwang = createUserWithId(3L, "주황");
-        youngjun = createUserWithId(4L, "영준");
-        sohyun = createUserWithId(5L, "소현");
-
-        payRoom = createPayRoomWithId(10L, PayRoom.builder()
-                .owner(gyounghwan)
-                .title("Podo MT")
-                .roundUnit(10)
-                .build());
+        gyounghwan = user(1L, "경환");
+        minwook = user(2L, "민욱");
+        juhwang = user(3L, "주황");
+        youngjun = user(4L, "영준");
+        sohyun = user(5L, "소현");
+        payRoom = room(10);
     }
 
     @Nested
-    @DisplayName("단일 결제 정산 테스트")
-    class SinglePayment {
+    @DisplayName("기본 분할")
+    class BasicSplit {
 
         @Test
-        @DisplayName("80,000원을 5명이 균등 분할한다 - 1인당 16,000원")
-        void calculate_evenSplit() {
-            Payment payment = createPayment(100L, gyounghwan, "장보기", 80000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, gyounghwan),
-                    createParticipant(2L, payment, minwook),
-                    createParticipant(3L, payment, juhwang),
-                    createParticipant(4L, payment, youngjun),
-                    createParticipant(5L, payment, sohyun)
-            );
+        @DisplayName("80,000원을 5명이 나누면 결제자를 뺀 4명이 16,000원씩 보낸다")
+        void evenSplit() {
+            Payment payment = payment(100L, gyounghwan, "장보기", 80000);
+            givenSettlement(Map.of(payment, participants(payment, gyounghwan, minwook, juhwang, youngjun, sohyun)));
 
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
-
-            SettlementResponse response = settlementService.calculate(10L);
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
 
             assertThat(response.getRoomTitle()).isEqualTo("Podo MT");
             assertThat(response.getTotalAmount()).isEqualTo(80000);
-
-            assertThat(response.getTransfers()).hasSize(4);
-
-            assertThat(response.getTransfers()).allMatch(t -> t.getAmount() == 16000);
-
-            assertThat(response.getTransfers())
-                    .allMatch(t -> t.getToUserId().equals(gyounghwan.getId()));
-            assertThat(response.getTransfers())
-                    .allMatch(t -> t.getToUserName().equals("경환"));
-
-            assertThat(response.getTransfers())
+            assertThat(response.getTransfers()).hasSize(4)
+                    .allMatch(t -> t.getAmount() == 16000)
+                    .allMatch(t -> t.getToUserName().equals("경환"))
                     .noneMatch(t -> t.getFromUserId().equals(gyounghwan.getId()));
         }
 
         @Test
-        @DisplayName("결제자 본인은 송금 대상에서 제외된다")
-        void calculate_payerExcluded() {
-            Payment payment = createPayment(100L, gyounghwan, "장보기", 80000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, gyounghwan),
-                    createParticipant(2L, payment, minwook),
-                    createParticipant(3L, payment, juhwang)
-            );
+        @DisplayName("송금 정보에 결제·참여자 정보가 모두 담긴다")
+        void transferContainsAllInfo() {
+            Payment payment = payment(100L, gyounghwan, "장보기", 80000);
+            List<PaymentParticipant> pps = participants(payment, gyounghwan, minwook);
+            givenSettlement(Map.of(payment, pps));
 
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
+            TransferInfo t = settlementService.calculate(ROOM_ID, OWNER_ID).getTransfers().get(0);
 
-            SettlementResponse response = settlementService.calculate(10L);
-
-            assertThat(response.getTransfers()).hasSize(2);
-            assertThat(response.getTransfers())
-                    .extracting(TransferInfo::getFromUserName)
-                    .containsExactlyInAnyOrder("민욱", "주황");
-        }
-    }
-
-    @Nested
-    @DisplayName("절사 옵션 테스트")
-    class Rounding {
-
-        @Test
-        @DisplayName("10원 단위 절사 - 20,000원 ÷ 3 = 6,666.67 → 6,660원")
-        void calculate_round10() {
-            payRoom = createPayRoomWithId(10L, PayRoom.builder()
-                    .owner(sohyun)
-                    .title("야식")
-                    .roundUnit(10)
-                    .build());
-
-            Payment payment = createPayment(100L, sohyun, "야식", 20000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, sohyun),
-                    createParticipant(2L, payment, gyounghwan),
-                    createParticipant(3L, payment, youngjun)
-            );
-
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
-
-            SettlementResponse response = settlementService.calculate(10L);
-
-            assertThat(response.getTransfers()).hasSize(2);
-            assertThat(response.getTransfers())
-                    .allMatch(t -> t.getAmount() == 6660);
+            assertThat(t.getFromUserName()).isEqualTo("민욱");
+            assertThat(t.getToUserName()).isEqualTo("경환");
+            assertThat(t.getAmount()).isEqualTo(40000);
+            assertThat(t.getPaymentId()).isEqualTo(100L);
+            assertThat(t.getPaymentTitle()).isEqualTo("장보기");
+            assertThat(t.getParticipantId()).isEqualTo(pps.get(1).getId());
+            assertThat(t.isSettled()).isFalse();
         }
 
         @Test
-        @DisplayName("100원 단위 절사 - 20,000원 ÷ 3 = 6,666.67 → 6,600원")
-        void calculate_round100() {
-            payRoom = createPayRoomWithId(10L, PayRoom.builder()
-                    .owner(sohyun)
-                    .title("야식")
-                    .roundUnit(100)
-                    .build());
+        @DisplayName("참여자가 결제자 본인뿐이면 송금 0건 (총액에는 포함)")
+        void onlyPayer() {
+            Payment payment = payment(100L, gyounghwan, "혼자 야식", 10000);
+            givenSettlement(Map.of(payment, participants(payment, gyounghwan)));
 
-            Payment payment = createPayment(100L, sohyun, "야식", 20000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, sohyun),
-                    createParticipant(2L, payment, gyounghwan),
-                    createParticipant(3L, payment, youngjun)
-            );
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
 
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
-
-            SettlementResponse response = settlementService.calculate(10L);
-
-            assertThat(response.getTransfers())
-                    .allMatch(t -> t.getAmount() == 6600);  // 6666.67 → 6600 (100원 절사)
+            assertThat(response.getTotalAmount()).isEqualTo(10000);
+            assertThat(response.getTransfers()).isEmpty();
+            assertThat(response.getNetTransfers()).isEmpty();
         }
 
         @Test
-        @DisplayName("1000원 단위 절사 - 20,000원 ÷ 3 = 6,666.67 → 6,000원")
-        void calculate_round1000() {
-            payRoom = createPayRoomWithId(10L, PayRoom.builder()
-                    .owner(sohyun)
-                    .title("야식")
-                    .roundUnit(1000)
-                    .build());
+        @DisplayName("결제가 없는 방은 총액 0, 송금 0건")
+        void emptyRoom() {
+            givenSettlement(Map.of());
 
-            Payment payment = createPayment(100L, sohyun, "야식", 20000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, sohyun),
-                    createParticipant(2L, payment, gyounghwan),
-                    createParticipant(3L, payment, youngjun)
-            );
-
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
-
-            // when
-            SettlementResponse response = settlementService.calculate(10L);
-
-            // then
-            assertThat(response.getTransfers())
-                    .allMatch(t -> t.getAmount() == 6000);  // 6666.67 → 6000 (1000원 절사)
-        }
-
-        @Test
-        @DisplayName("절사할 게 없는 경우 - 80,000원 ÷ 5 = 정확히 16,000원")
-        void calculate_noRoundingNeeded() {
-            Payment payment = createPayment(100L, gyounghwan, "장보기", 80000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, gyounghwan),
-                    createParticipant(2L, payment, minwook),
-                    createParticipant(3L, payment, juhwang),
-                    createParticipant(4L, payment, youngjun),
-                    createParticipant(5L, payment, sohyun)
-            );
-
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
-
-            SettlementResponse response = settlementService.calculate(10L);
-
-            assertThat(response.getTransfers())
-                    .allMatch(t -> t.getAmount() == 16000);
-        }
-    }
-
-    @Nested
-    @DisplayName("복수 결제 정산 테스트")
-    class MultiplePayments {
-
-        @Test
-        @DisplayName("여러 결제가 있을 때 모든 송금이 합쳐서 계산된다")
-        void calculate_multiplePayments() {
-            Payment payment1 = createPayment(100L, gyounghwan, "장보기", 80000);
-            Payment payment2 = createPayment(101L, sohyun, "야식", 20000);
-
-            List<PaymentParticipant> participants1 = List.of(
-                    createParticipant(1L, payment1, gyounghwan),
-                    createParticipant(2L, payment1, minwook),
-                    createParticipant(3L, payment1, juhwang),
-                    createParticipant(4L, payment1, youngjun),
-                    createParticipant(5L, payment1, sohyun)
-            );
-
-            List<PaymentParticipant> participants2 = List.of(
-                    createParticipant(6L, payment2, sohyun),
-                    createParticipant(7L, payment2, gyounghwan),
-                    createParticipant(8L, payment2, youngjun)
-            );
-
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom))
-                    .willReturn(List.of(payment1, payment2));
-            given(participantRepository.findByPayment(payment1)).willReturn(participants1);
-            given(participantRepository.findByPayment(payment2)).willReturn(participants2);
-
-            SettlementResponse response = settlementService.calculate(10L);
-
-            assertThat(response.getTotalAmount()).isEqualTo(100000);  // 80000 + 20000
-
-            assertThat(response.getTransfers()).hasSize(6);
-
-            long groceryTransfers = response.getTransfers().stream()
-                    .filter(t -> t.getPaymentTitle().equals("장보기"))
-                    .count();
-            assertThat(groceryTransfers).isEqualTo(4);
-
-            long lateNightTransfers = response.getTransfers().stream()
-                    .filter(t -> t.getPaymentTitle().equals("야식"))
-                    .count();
-            assertThat(lateNightTransfers).isEqualTo(2);
-        }
-    }
-
-    @Nested
-    @DisplayName("엣지 케이스 테스트")
-    class EdgeCases {
-
-        @Test
-        @DisplayName("존재하지 않는 방 ID로 정산 요청 시 예외 발생")
-        void calculate_roomNotFound() {
-            given(payRoomRepository.findById(999L)).willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> settlementService.calculate(999L))
-                    .isInstanceOf(PayRoomNotFoundException.class);
-        }
-
-        @Test
-        @DisplayName("결제가 없는 방의 정산 결과 - 송금 0건")
-        void calculate_emptyRoom() {
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of());
-
-            SettlementResponse response = settlementService.calculate(10L);
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
 
             assertThat(response.getTotalAmount()).isZero();
             assertThat(response.getTransfers()).isEmpty();
         }
+    }
 
-        @Test
-        @DisplayName("참여자가 결제자 1명뿐인 경우 - 송금 0건")
-        void calculate_onlyPayerAsParticipant() {
-            Payment payment = createPayment(100L, gyounghwan, "혼자 야식", 10000);
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, gyounghwan)
-            );
+    @Nested
+    @DisplayName("절사")
+    class Rounding {
 
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
+        @ParameterizedTest(name = "절사 {0}원: 20,000 ÷ 3 = 6,666 → {1}원")
+        @CsvSource({"1, 6666", "10, 6660", "100, 6600", "1000, 6000"})
+        @DisplayName("절사 단위에 따라 1인당 금액이 내림된다 (원래 금액은 rawAmount에 남는다)")
+        void roundDown(int roundUnit, int expected) {
+            payRoom = room(roundUnit);
+            Payment payment = payment(100L, sohyun, "야식", 20000);
+            givenSettlement(Map.of(payment, participants(payment, sohyun, gyounghwan, youngjun)));
 
-            SettlementResponse response = settlementService.calculate(10L);
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
 
-            assertThat(response.getTransfers()).isEmpty();
-            assertThat(response.getTotalAmount()).isEqualTo(10000);
+            assertThat(response.getTransfers()).hasSize(2)
+                    .allMatch(t -> t.getAmount() == expected)
+                    .allMatch(t -> t.getRawAmount() == 6666);
         }
     }
 
     @Nested
-    @DisplayName("송금 정보 상세 검증")
-    class TransferInfoDetails {
+    @DisplayName("보낼 돈 합치기 (netTransfers)")
+    class NetTransfers {
 
         @Test
-        @DisplayName("송금 정보에 결제 정보와 참여자 ID가 포함된다")
-        void calculate_transferContainsAllInfo() {
-            Payment payment = createPayment(100L, gyounghwan, "장보기", 80000);
-            PaymentParticipant minwookParticipant = createParticipant(2L, payment, minwook);
+        @DisplayName("같은 사람에게 보낼 돈은 결제가 달라도 한 줄로 합쳐진다")
+        void sameDirection_isMerged() {
+            Payment p1 = payment(100L, gyounghwan, "장보기", 30000);   // 3명 → 10,000
+            Payment p2 = payment(101L, gyounghwan, "택시", 20000);     // 2명 → 10,000
+            List<PaymentParticipant> pps1 = participants(p1, gyounghwan, minwook, juhwang);
+            List<PaymentParticipant> pps2 = participants(p2, gyounghwan, minwook);
+            givenSettlement(Map.of(p1, pps1, p2, pps2));
 
-            List<PaymentParticipant> participants = List.of(
-                    createParticipant(1L, payment, gyounghwan),
-                    minwookParticipant
-            );
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
 
-            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(paymentRepository.findByPayRoom(payRoom)).willReturn(List.of(payment));
-            given(participantRepository.findByPayment(payment)).willReturn(participants);
+            assertThat(response.getTransfers()).hasSize(3);       // 결제별: 민욱 2건 + 주황 1건
+            assertThat(response.getNetTransfers()).hasSize(2);    // 사람별: 민욱→경환, 주황→경환
 
-            SettlementResponse response = settlementService.calculate(10L);
+            NetTransferInfo minwookNet = findNet(response, "민욱");
+            assertThat(minwookNet.getAmount()).isEqualTo(20000);
+            assertThat(minwookNet.getParticipantIds()).hasSize(2);
+        }
 
-            TransferInfo minwookTransfer = response.getTransfers().get(0);
-            assertThat(minwookTransfer.getFromUserId()).isEqualTo(minwook.getId());
-            assertThat(minwookTransfer.getFromUserName()).isEqualTo("민욱");
-            assertThat(minwookTransfer.getToUserId()).isEqualTo(gyounghwan.getId());
-            assertThat(minwookTransfer.getToUserName()).isEqualTo("경환");
-            assertThat(minwookTransfer.getPaymentId()).isEqualTo(100L);
-            assertThat(minwookTransfer.getPaymentTitle()).isEqualTo("장보기");
-            assertThat(minwookTransfer.getParticipantId()).isEqualTo(2L);
-            assertThat(minwookTransfer.isSettled()).isFalse();
+        @Test
+        @DisplayName("합친 금액은 원래 금액끼리 더한 뒤 한 번만 절사한다")
+        void roundAfterSum() {
+            payRoom = room(1000);
+            Payment p1 = payment(100L, gyounghwan, "커피", 3000);   // 2명 → 1,500
+            Payment p2 = payment(101L, gyounghwan, "간식", 3000);   // 2명 → 1,500
+            givenSettlement(Map.of(
+                    p1, participants(p1, gyounghwan, minwook),
+                    p2, participants(p2, gyounghwan, minwook)));
+
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
+
+            // 결제별로 절사하면 1,000 + 1,000 = 2,000원이지만, 합친 뒤 절사하면 3,000원
+            assertThat(response.getTransfers()).allMatch(t -> t.getAmount() == 1000);
+            assertThat(findNet(response, "민욱").getAmount()).isEqualTo(3000);
+        }
+
+        @Test
+        @DisplayName("묶인 참여자가 모두 정산돼야 합친 줄도 정산 완료가 된다")
+        void settledOnlyWhenAllSettled() {
+            Payment p1 = payment(100L, gyounghwan, "장보기", 20000);
+            Payment p2 = payment(101L, gyounghwan, "택시", 20000);
+            List<PaymentParticipant> pps1 = participants(p1, gyounghwan, minwook);
+            List<PaymentParticipant> pps2 = participants(p2, gyounghwan, minwook);
+            pps1.get(1).markAsSettled();   // 민욱의 장보기만 정산
+            givenSettlement(Map.of(p1, pps1, p2, pps2));
+
+            assertThat(findNet(settlementService.calculate(ROOM_ID, OWNER_ID), "민욱").isSettled()).isFalse();
+
+            pps2.get(1).markAsSettled();   // 택시까지 정산
+            assertThat(findNet(settlementService.calculate(ROOM_ID, OWNER_ID), "민욱").isSettled()).isTrue();
         }
     }
 
-    private User createUserWithId(Long id, String name) {
-        User user = User.builder()
-                .loginId("user" + id)
-                .name(name)
-                .build();
-        return setId(User.class, user, id);
+    @Nested
+    @DisplayName("권한·예외")
+    class Exceptions {
+
+        @Test
+        @DisplayName("방 멤버가 아니면 정산을 볼 수 없고, 결제도 조회하지 않는다")
+        void notMember() {
+            given(payRoomRepository.findById(ROOM_ID)).willReturn(Optional.of(payRoom));
+            given(roomMemberRepository.existsMember(ROOM_ID, 99L)).willReturn(false);
+
+            assertThatThrownBy(() -> settlementService.calculate(ROOM_ID, 99L))
+                    .isInstanceOf(NotRoomMemberException.class);
+
+            verify(paymentRepository, never()).findAllByPayRoomWithPayer(any());
+        }
+
+        @Test
+        @DisplayName("없는 방이면 PayRoomNotFoundException")
+        void roomNotFound() {
+            given(payRoomRepository.findById(999L)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> settlementService.calculate(999L, OWNER_ID))
+                    .isInstanceOf(PayRoomNotFoundException.class);
+        }
     }
 
-    private PayRoom createPayRoomWithId(Long id, PayRoom template) {
-        return setId(PayRoom.class, template, id);
+    @Nested
+    @DisplayName("공유 문구")
+    class ShareText {
+
+        @Test
+        @DisplayName("합친 송금 내역으로 문구를 만들고, 계좌가 없으면 계좌정보 칸은 빠진다")
+        void buildShareText_withoutAccounts() {
+            Payment payment = payment(100L, gyounghwan, "장보기", 80000);
+            givenSettlement(Map.of(payment, participants(payment, gyounghwan, minwook, juhwang, youngjun, sohyun)));
+            SettlementResponse settlement = settlementService.calculate(ROOM_ID, OWNER_ID);
+
+            String text = settlementService.buildShareText(settlement, List.of());
+
+            assertThat(text)
+                    .startsWith("'Podo MT' 모임 정산 내용입니다.")
+                    .contains("민욱님은 경환님에게 16,000원 입금 부탁드립니다.")
+                    .doesNotContain("[계좌정보]");
+        }
     }
 
-    private Payment createPayment(Long id, User payer, String title, int amount) {
-        Payment payment = Payment.builder()
-                .payRoom(payRoom)
-                .payer(payer)
-                .title(title)
-                .amount(amount)
-                .build();
-        return setId(Payment.class, payment, id);
+    // === 테스트 헬퍼 === //
+
+    /** 방 조회 + 멤버 확인 + 결제 목록 + 참여자 묶음을 한 번에 준비 */
+    private void givenSettlement(Map<Payment, List<PaymentParticipant>> data) {
+        List<Payment> payments = data.keySet().stream()
+                .sorted((a, b) -> a.getId().compareTo(b.getId()))
+                .toList();
+        Map<Long, List<PaymentParticipant>> grouped = new java.util.HashMap<>();
+        data.forEach((p, pps) -> grouped.put(p.getId(), pps));
+
+        given(payRoomRepository.findById(ROOM_ID)).willReturn(Optional.of(payRoom));
+        given(roomMemberRepository.existsMember(ROOM_ID, OWNER_ID)).willReturn(true);
+        given(paymentRepository.findAllByPayRoomWithPayer(payRoom)).willReturn(payments);
+        given(participantRepository.findGroupedByPayment(anyList())).willReturn(grouped);
     }
 
-    private PaymentParticipant createParticipant(Long id, Payment payment, User user) {
-        PaymentParticipant pp = PaymentParticipant.builder()
-                .payment(payment)
-                .user(user)
-                .build();
-        return setId(PaymentParticipant.class, pp, id);
+    private NetTransferInfo findNet(SettlementResponse response, String fromName) {
+        return response.getNetTransfers().stream()
+                .filter(n -> n.getFromUserName().equals(fromName))
+                .findFirst()
+                .orElseThrow();
     }
 
-    private <T> T setId(Class<T> clazz, T entity, Long id) {
+    private PayRoom room(int roundUnit) {
+        return setId(PayRoom.class, PayRoom.builder()
+                .owner(gyounghwan).title("Podo MT").roundUnit(roundUnit).build(), ROOM_ID);
+    }
+
+    private User user(Long id, String name) {
+        return setId(User.class, User.builder().loginId("user" + id).name(name).build(), id);
+    }
+
+    private Payment payment(Long id, User payer, String title, int amount) {
+        return setId(Payment.class, Payment.builder()
+                .payRoom(payRoom).payer(payer).title(title).amount(amount).build(), id);
+    }
+
+    private List<PaymentParticipant> participants(Payment payment, User... users) {
+        return java.util.Arrays.stream(users)
+                .map(u -> setId(PaymentParticipant.class,
+                        PaymentParticipant.builder().payment(payment).user(u).build(), nextParticipantId++))
+                .toList();
+    }
+
+    private static <T> T setId(Class<T> clazz, T entity, Long id) {
         try {
-            java.lang.reflect.Field idField = clazz.getDeclaredField("id");
+            Field idField = clazz.getDeclaredField("id");
             idField.setAccessible(true);
             idField.set(entity, id);
             return entity;

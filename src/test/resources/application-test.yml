@@ -10,3 +10,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+
+# 테스트 전용 가짜 키 (운영 키와 무관, 깃허브에 올라가도 괜찮음)
+jwt:
+  secret: cG9kby10ZXN0LW9ubHktand0LXNlY3JldC1rZXktMDEyMzQ1Njc4OQ==

@@ -31,7 +31,7 @@ public class SettlementApiController {
             @PathVariable Long participantId,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        paymentService.markAsSettled(participantId, principal.getUserId());
+        paymentService.markAsSettled(roomId, participantId, principal.getUserId());
         return ApiResponse.success();
     }
 
@@ -41,7 +41,7 @@ public class SettlementApiController {
             @PathVariable Long participantId,
             @AuthenticationPrincipal PrincipalUser principal
     ) {
-        paymentService.markAsUnsettled(participantId, principal.getUserId());
+        paymentService.markAsUnsettled(roomId, participantId, principal.getUserId());
         return ApiResponse.success();
     }
 

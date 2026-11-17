@@ -62,7 +62,7 @@ public class PaymentController {
                          @PathVariable Long participantId,
                          @AuthenticationPrincipal PrincipalUser principal) {
 
-        paymentService.markAsSettled(participantId, principal.getUserId());
+        paymentService.markAsSettled(roomId, participantId, principal.getUserId());
         return "redirect:/rooms/" + roomId + "/settlement";
     }
 
@@ -71,7 +71,7 @@ public class PaymentController {
                            @PathVariable Long participantId,
                            @AuthenticationPrincipal PrincipalUser principal) {
 
-        paymentService.markAsUnsettled(participantId, principal.getUserId());
+        paymentService.markAsUnsettled(roomId, participantId, principal.getUserId());
         return "redirect:/rooms/" + roomId + "/settlement";
     }
 
@@ -79,7 +79,7 @@ public class PaymentController {
     public String settleGroup(@PathVariable Long roomId,
                               @RequestParam List<Long> participantIds,
                               @AuthenticationPrincipal PrincipalUser principal) {
-        paymentService.markGroupAsSettled(participantIds, principal.getUserId());
+        paymentService.markGroupAsSettled(roomId, participantIds, principal.getUserId());
         return "redirect:/rooms/" + roomId + "/settlement";
     }
 
@@ -87,7 +87,7 @@ public class PaymentController {
     public String unsettleGroup(@PathVariable Long roomId,
                                 @RequestParam List<Long> participantIds,
                                 @AuthenticationPrincipal PrincipalUser principal) {
-        paymentService.markGroupAsUnsettled(participantIds, principal.getUserId());
+        paymentService.markGroupAsUnsettled(roomId, participantIds, principal.getUserId());
         return "redirect:/rooms/" + roomId + "/settlement";
     }
 
