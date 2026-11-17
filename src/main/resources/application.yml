@@ -71,3 +71,4 @@ podo:
   s3:
     bucket: podo-profile-pien
     region: ap-northeast-2
+    prefix: profiles/

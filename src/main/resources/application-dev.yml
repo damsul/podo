@@ -28,3 +28,7 @@ logging:
     org.springframework.web: DEBUG
     io.swagger: DEBUG
     org.springframework.security: DEBUG
+
+podo:
+  s3:
+    prefix: dev/profiles/      # 로컬은 별도 폴더

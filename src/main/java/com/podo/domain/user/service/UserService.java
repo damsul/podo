@@ -66,29 +66,6 @@ public class UserService {
         return UserResponse.from(user);
     }
 
-    @Transactional
-    public UserResponse updateMyProfile(Long userId, ProfileEditRequest request, String uploadedImageUrl) {
-        User user = findUserById(userId);
-
-        if (uploadedImageUrl != null) {
-            user.updateProfile(user.getName(), uploadedImageUrl);
-        }
-
-        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            validateDuplicateEmail(request.getEmail());
-            user.updateEmail(request.getEmail());
-        }
-
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            if (user.isSocialUser()) {
-                throw new SocialUserPasswordChangeException();
-            }
-            user.changePassword(passwordEncoder.encode(request.getPassword()));
-        }
-
-        return UserResponse.from(user);
-    }
-
     public UserResponse getMyPage(Long userId) {
         User user = findUserById(userId);
         return UserResponse.from(user);
@@ -236,6 +213,11 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
+    // 프로필 사진 교체·삭제
+    // 트랜잭션이 끝난 뒤 결과에 따라 S3 파일을 정리한다
+    //  - 커밋 성공: 이전 사진 삭제 (DB가 새 사진을 가리키므로)
+    //  - 롤백: 방금 올린 새 사진 삭제 (DB는 여전히 이전 사진을 가리키므로)
+    //  - 결과를 알 수 없음(STATUS_UNKNOWN): 어느 쪽도 지우지 않음 (잘못 지우면 사진이 깨지므로 고아 파일이 남는 편이 안전)
     private void applyProfileImage(User user, MultipartFile file, boolean delete) {
         boolean hasNew = file != null && !file.isEmpty();
         if (!hasNew && !delete) {
@@ -243,16 +225,19 @@ public class UserService {
         }
         String oldUrl = user.getProfileImageUrl();
         String newUrl = hasNew ? profileImageStorage.upload(user.getId(), file) : null;
-        user.updateProfile(user.getName(), newUrl);
 
-        if (oldUrl != null) {
-            // DB 커밋이 성공한 뒤에만 이전 파일 삭제 (롤백됐는데 사지만 사라지는 걸 방비)
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    profileImageStorage.deleteIfOwned(oldUrl);
+        // 업로드 직후 바로 등록: 이후 어디서 예외가 나도 정리 대상에 들어간다
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_COMMITTED) {
+                    profileImageStorage.deleteIfOwned(oldUrl);   // null이면 아무것도 안 함
+                } else if (status == STATUS_ROLLED_BACK) {
+                    profileImageStorage.deleteIfOwned(newUrl);   // null이면 아무것도 안 함
                 }
-            });
-        }
+            }
+        });
+
+        user.updateProfile(user.getName(), newUrl);
     }
 }

@@ -36,7 +36,7 @@ public class ProfileImageStorage {
         }
         ImageType type = detect(bytes);
 
-        String key = "profiles/%d/%s.%s".formatted(userId, UUID.randomUUID(), type.ext);
+        String key = "%s%d/%s.%s".formatted(props.prefix(), userId, UUID.randomUUID(), type.ext);
         try {
             s3Client.putObject(
                     PutObjectRequest.builder()
@@ -55,7 +55,7 @@ public class ProfileImageStorage {
 
     // 우리 버킷의 profiles/ 아래 파일만 삭제 (소셜 로그인 프로필 URL 등은 건드리지 않음)
     public void deleteIfOwned(String url) {
-        if (url == null || !url.startsWith(baseUrl() + "profiles/")) {
+        if (url == null || !url.startsWith(baseUrl() + props.prefix())) {
             return;
         }
         String key = url.substring(baseUrl().length());
