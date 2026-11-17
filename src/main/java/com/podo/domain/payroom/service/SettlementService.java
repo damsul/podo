@@ -76,6 +76,7 @@ public class SettlementService {
                         .paymentId(payment.getId()).paymentTitle(payment.getTitle())
                         .participantId(participant.getId())
                         .settled(participant.isSettled())
+                        .canSettle(isOwner || payer.getId().equals(userId))   // 방장 또는 받는 사람
                         .build());
 
                 String key = pu.getId() + "->" + payer.getId();
@@ -93,6 +94,7 @@ public class SettlementService {
                         .rawAmount(acc.rawTotal)
                         .amount((acc.rawTotal / roundUnit) * roundUnit)
                         .settled(acc.allSettled)
+                        .canSettle(isOwner || acc.toUser.getId().equals(userId))   // 방장 또는 받는 사람
                         .participantIds(acc.participantIds)
                         .build())
                 .toList();

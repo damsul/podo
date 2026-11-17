@@ -170,12 +170,25 @@ class PaymentServiceIntegrationTest {
         }
 
         @Test
-        @DisplayName("방장이 아니면 정산 체크할 수 없다 (NotRoomOwnerException)")
-        void settle_byMember_throwsException() {
+        @DisplayName("받는 사람(결제자)은 자기 결제의 정산 체크를 할 수 있다")
+        void settle_byReceiver() {
+            // member1이 결제하고 member2가 member1에게 보내야 하는 상황
+            Long ppId = firstOtherParticipantId(createPayment(payRoom, member1, 20000, member1, member2));
+
+            paymentService.markAsSettled(payRoom.getId(), ppId, member1.getId());
+            flushAndClear();
+
+            assertThat(participantRepository.findById(ppId).orElseThrow().isSettled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("방장도 받는 사람도 아니면 정산 체크할 수 없다 (NotSettlementManagerException)")
+        void settle_bySender_throwsException() {
+            // 방장이 결제, member1이 보내는 사람 → member1은 체크 불가
             Long ppId = firstOtherParticipantId(createPayment(payRoom, owner, 80000, owner, member1));
 
             assertThatThrownBy(() -> paymentService.markAsSettled(payRoom.getId(), ppId, member1.getId()))
-                    .isInstanceOf(NotRoomOwnerException.class);
+                    .isInstanceOf(NotSettlementManagerException.class);
         }
 
         @Test

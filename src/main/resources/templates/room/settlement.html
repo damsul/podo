@@ -53,12 +53,12 @@
           <form th:if="${!net.settled}" method="post" class="toggle-form"
                 th:action="@{/rooms/{roomId}/payments/participants/settle-group(roomId=${settlement.roomId})}">
             <input th:each="pid : ${net.participantIds}" type="hidden" name="participantIds" th:value="${pid}">
-            <button type="submit" class="toggle-button toggle-settle" th:disabled="${!settlement.roomOwner}">정산 완료</button>
+            <button type="submit" class="toggle-button toggle-settle" th:disabled="${!net.canSettle}">정산 완료</button>
           </form>
           <form th:if="${net.settled}" method="post" class="toggle-form"
                 th:action="@{/rooms/{roomId}/payments/participants/unsettle-group(roomId=${settlement.roomId})}">
             <input th:each="pid : ${net.participantIds}" type="hidden" name="participantIds" th:value="${pid}">
-            <button type="submit" class="toggle-button toggle-unsettle" th:disabled="${!settlement.roomOwner}">완료 취소</button>
+            <button type="submit" class="toggle-button toggle-unsettle" th:disabled="${!net.canSettle}">완료 취소</button>
           </form>
         </div>
       </div>

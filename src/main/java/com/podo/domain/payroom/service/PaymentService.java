@@ -113,39 +113,51 @@ public class PaymentService {
         paymentRepository.delete(payment);
     }
 
-    // ===== 정산 체크 (방장만, URL의 방에 속한 참여자만) =====
+    // ===== 정산 체크 (방장 또는 받는 사람(결제자), URL의 방에 속한 참여자만) =====
 
     @Transactional
     public void markAsSettled(Long roomId, Long participantId, Long userId) {
-        findParticipantsForOwner(roomId, List.of(participantId), userId)
+        findParticipantsForSettler(roomId, List.of(participantId), userId)
                 .forEach(PaymentParticipant::markAsSettled);
     }
 
     @Transactional
     public void markAsUnsettled(Long roomId, Long participantId, Long userId) {
-        findParticipantsForOwner(roomId, List.of(participantId), userId)
+        findParticipantsForSettler(roomId, List.of(participantId), userId)
                 .forEach(PaymentParticipant::markAsUnsettled);
     }
 
     @Transactional
     public void markGroupAsSettled(Long roomId, List<Long> participantIds, Long userId) {
-        findParticipantsForOwner(roomId, participantIds, userId)
+        findParticipantsForSettler(roomId, participantIds, userId)
                 .forEach(PaymentParticipant::markAsSettled);
     }
 
     @Transactional
     public void markGroupAsUnsettled(Long roomId, List<Long> participantIds, Long userId) {
-        findParticipantsForOwner(roomId, participantIds, userId)
+        findParticipantsForSettler(roomId, participantIds, userId)
                 .forEach(PaymentParticipant::markAsUnsettled);
     }
 
-    // 방장 확인을 먼저 하고, 참여자를 "전부" 확인한 뒤에 돌려준다.
-    // 하나라도 다른 방 참여자면 아무것도 바꾸지 않고 예외 (일부만 바뀌는 상황 방지)
-    private List<PaymentParticipant> findParticipantsForOwner(Long roomId, List<Long> participantIds, Long userId) {
-        validateOwner(findPayRoomById(roomId), findUserById(userId));
-        return participantIds.stream()
+    // 1) 참여자를 "전부" 찾아서 URL의 방 참여자인지 확인 (아니면 404)
+    // 2) 방장이면 통과, 아니면 모든 참여자가 "내가 결제한(돈을 받을)" 항목이어야 통과 (아니면 403)
+    // 하나라도 걸리면 아무것도 바꾸지 않는다 (일부만 바뀌는 상황 방지)
+    private List<PaymentParticipant> findParticipantsForSettler(Long roomId, List<Long> participantIds, Long userId) {
+        PayRoom payRoom = findPayRoomById(roomId);
+        User currentUser = findUserById(userId);
+
+        List<PaymentParticipant> participants = participantIds.stream()
                 .map(id -> findParticipantInRoom(roomId, id))
                 .toList();
+
+        if (!payRoom.isOwner(currentUser)) {
+            boolean allReceivedByMe = participants.stream()
+                    .allMatch(pp -> pp.getPayment().isPaidBy(currentUser));
+            if (!allReceivedByMe) {
+                throw new NotSettlementManagerException();
+            }
+        }
+        return participants;
     }
 
     // 다른 방의 참여자 id를 넣으면 "없는 참여자"로 처리 (findPaymentInRoom과 같은 방식, 404)
@@ -182,12 +194,6 @@ public class PaymentService {
     private void validatePayerSelection(PayRoom payRoom, User currentUser, User payer) {
         if (!payRoom.isOwner(currentUser) && !currentUser.getId().equals(payer.getId())) {
             throw new NotPayerSelfException();
-        }
-    }
-
-    private void validateOwner(PayRoom payRoom, User user) {
-        if (!payRoom.isOwner(user)) {
-            throw new NotRoomOwnerException();
         }
     }
 

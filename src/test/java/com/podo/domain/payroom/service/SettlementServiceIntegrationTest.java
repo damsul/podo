@@ -87,6 +87,25 @@ class SettlementServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("canSettle: 방장은 모든 줄, 일반 멤버는 자기가 받을 줄만 true")
+    void calculate_canSettle() {
+        pay(gyounghwan, "장보기", 80000, gyounghwan, minwook, sohyun);   // 경환이 받음
+        pay(sohyun, "야식", 20000, sohyun, minwook);                     // 소현이 받음
+
+        SettlementResponse byOwner = settlementService.calculate(roomId, gyounghwan.getId());
+        assertThat(byOwner.getTransfers()).allMatch(TransferInfo::isCanSettle);
+
+        SettlementResponse bySohyun = settlementService.calculate(roomId, sohyun.getId());
+        assertThat(bySohyun.getTransfers())
+                .allMatch(t -> t.isCanSettle() == t.getToUserId().equals(sohyun.getId()));
+        assertThat(bySohyun.getNetTransfers())
+                .allMatch(n -> n.isCanSettle() == n.getToUserId().equals(sohyun.getId()));
+
+        SettlementResponse byMinwook = settlementService.calculate(roomId, minwook.getId());
+        assertThat(byMinwook.getTransfers()).noneMatch(TransferInfo::isCanSettle);   // 보내기만 함
+    }
+
+    @Test
     @DisplayName("방 멤버가 아니면 정산 결과를 볼 수 없다")
     void calculate_byOutsider_throwsException() {
         User outsider = userRepository.save(User.builder().loginId("outsider").name("외부인").build());

@@ -30,6 +30,7 @@ public class SettlementResponse {
         private String paymentTitle;
         private Long participantId;
         private boolean settled;
+        private boolean canSettle;
     }
 
     @Getter
@@ -39,9 +40,10 @@ public class SettlementResponse {
         private String fromUserName;
         private Long toUserId;
         private String toUserName;
-        private int rawAmount;
         private int amount;
-        private boolean settled;
+        private int rawAmount;
         private List<Long> participantIds;
+        private boolean settled;
+        private boolean canSettle;
     }
 }

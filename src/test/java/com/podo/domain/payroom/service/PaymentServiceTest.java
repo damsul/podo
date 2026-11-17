@@ -300,13 +300,13 @@ class PaymentServiceTest {
     }
 
     @Nested
-    @DisplayName("정산 체크 (방장만, 그 방의 참여자만)")
+    @DisplayName("정산 체크 (방장 또는 받는 사람, 그 방의 참여자만)")
     class SettleCheck {
 
         @Test
-        @DisplayName("방장은 정산 완료로 표시할 수 있다")
+        @DisplayName("방장은 다른 사람이 결제한 항목도 정산 완료로 표시할 수 있다")
         void markAsSettled_byOwner_success() {
-            PaymentParticipant pp = participant(500L, payment, member);
+            PaymentParticipant pp = participant(500L, payment, member2);   // 결제자는 member
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
             given(userRepository.findById(1L)).willReturn(Optional.of(owner));
             given(participantRepository.findById(500L)).willReturn(Optional.of(pp));
@@ -317,29 +317,44 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("방장은 정산 완료를 취소할 수 있다")
-        void markAsUnsettled_byOwner_success() {
-            PaymentParticipant pp = participant(500L, payment, member);
-            pp.markAsSettled();
+        @DisplayName("받는 사람(결제자)은 자기 결제의 정산 완료를 표시할 수 있다")
+        void markAsSettled_byReceiver_success() {
+            PaymentParticipant pp = participant(500L, payment, member2);   // member2 → member에게 송금
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+            given(userRepository.findById(2L)).willReturn(Optional.of(member));
             given(participantRepository.findById(500L)).willReturn(Optional.of(pp));
 
-            paymentService.markAsUnsettled(10L, 500L, 1L);
+            paymentService.markAsSettled(10L, 500L, 2L);
+
+            assertThat(pp.isSettled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("받는 사람(결제자)은 정산 완료를 취소할 수 있다")
+        void markAsUnsettled_byReceiver_success() {
+            PaymentParticipant pp = participant(500L, payment, member2);
+            pp.markAsSettled();
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(2L)).willReturn(Optional.of(member));
+            given(participantRepository.findById(500L)).willReturn(Optional.of(pp));
+
+            paymentService.markAsUnsettled(10L, 500L, 2L);
 
             assertThat(pp.isSettled()).isFalse();
         }
 
         @Test
-        @DisplayName("방장이 아니면 NotRoomOwnerException이고, 참여자는 조회조차 하지 않는다")
-        void markAsSettled_byMember_throwsException() {
+        @DisplayName("방장도 받는 사람도 아니면 NotSettlementManagerException (보내는 사람 본인도 불가)")
+        void markAsSettled_bySender_throwsException() {
+            PaymentParticipant pp = participant(500L, payment, member2);   // member2가 보내는 사람
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(userRepository.findById(2L)).willReturn(Optional.of(member));
+            given(userRepository.findById(3L)).willReturn(Optional.of(member2));
+            given(participantRepository.findById(500L)).willReturn(Optional.of(pp));
 
-            assertThatThrownBy(() -> paymentService.markAsSettled(10L, 500L, 2L))
-                    .isInstanceOf(NotRoomOwnerException.class);
+            assertThatThrownBy(() -> paymentService.markAsSettled(10L, 500L, 3L))
+                    .isInstanceOf(NotSettlementManagerException.class);
 
-            verify(participantRepository, never()).findById(any());
+            assertThat(pp.isSettled()).isFalse();
         }
 
         @Test
@@ -357,19 +372,40 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("묶음 정산은 한 번에 모두 완료 처리된다")
-        void markGroupAsSettled_success() {
-            PaymentParticipant pp1 = participant(500L, payment, member);
-            PaymentParticipant pp2 = participant(501L, payment, member2);
+        @DisplayName("받는 사람은 자기 결제들로만 이뤄진 묶음을 한 번에 정산할 수 있다")
+        void markGroupAsSettled_byReceiver_success() {
+            Payment payment2 = setId(Payment.class, Payment.builder()
+                    .payRoom(payRoom).payer(member).title("택시").amount(20000).build(), 102L);
+            PaymentParticipant pp1 = participant(500L, payment, member2);
+            PaymentParticipant pp2 = participant(501L, payment2, member2);
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+            given(userRepository.findById(2L)).willReturn(Optional.of(member));
             given(participantRepository.findById(500L)).willReturn(Optional.of(pp1));
             given(participantRepository.findById(501L)).willReturn(Optional.of(pp2));
 
-            paymentService.markGroupAsSettled(10L, List.of(500L, 501L), 1L);
+            paymentService.markGroupAsSettled(10L, List.of(500L, 501L), 2L);
 
             assertThat(pp1.isSettled()).isTrue();
             assertThat(pp2.isSettled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("묶음에 남이 받을 돈이 섞이면 받는 사람이라도 아무것도 바뀌지 않는다")
+        void markGroupAsSettled_mixedReceiver_changesNothing() {
+            Payment ownersPayment = setId(Payment.class, Payment.builder()
+                    .payRoom(payRoom).payer(owner).title("숙소").amount(100000).build(), 102L);
+            PaymentParticipant mine = participant(500L, payment, member2);          // member가 받을 돈
+            PaymentParticipant notMine = participant(501L, ownersPayment, member2); // 방장이 받을 돈
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(2L)).willReturn(Optional.of(member));
+            given(participantRepository.findById(500L)).willReturn(Optional.of(mine));
+            given(participantRepository.findById(501L)).willReturn(Optional.of(notMine));
+
+            assertThatThrownBy(() -> paymentService.markGroupAsSettled(10L, List.of(500L, 501L), 2L))
+                    .isInstanceOf(NotSettlementManagerException.class);
+
+            assertThat(mine.isSettled()).isFalse();
+            assertThat(notMine.isSettled()).isFalse();
         }
 
         @Test

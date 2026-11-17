@@ -25,6 +25,7 @@ public enum ErrorCode {
     NOT_ROOM_OWNER(HttpStatus.FORBIDDEN, "R002", "방장만 수행할 수 있는 작업입니다"),
     NOT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "R003", "방 멤버가 아닙니다"),
     ALREADY_ROOM_MEMBER(HttpStatus.CONFLICT, "R004", "이미 페이방의 멤버입니다"),
+    NOT_SETTLEMENT_MANAGER(HttpStatus.FORBIDDEN, "R005", "정산 상태는 방장 또는 받는 사람만 변경할 수 있습니다"),
 
     // Payment
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "결제 항목을 찾을 수 없습니다"),
