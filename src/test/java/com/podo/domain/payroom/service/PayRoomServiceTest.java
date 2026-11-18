@@ -283,6 +283,50 @@ class PayRoomServiceTest {
     }
 
     @Nested
+    @DisplayName("절사 단위 변경 테스트 (정산 화면)")
+    class ChangeRoundUnit {
+
+        @Test
+        @DisplayName("방장은 절사 단위만 바꿀 수 있고, 제목·마감일은 그대로다")
+        void changeRoundUnit_byOwner_success() {
+            PayRoom room = createPayRoomWithId(10L, PayRoom.builder()
+                    .owner(owner).title("Podo MT").dueDate(LocalDate.of(2026, 6, 12)).roundUnit(100).build());
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(room));
+            given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+
+            PayRoomResponse response = payRoomService.changeRoundUnit(10L, 1L, 1000);
+
+            assertThat(response.getRoundUnit()).isEqualTo(1000);
+            assertThat(room.getTitle()).isEqualTo("Podo MT");
+            assertThat(room.getDueDate()).isEqualTo(LocalDate.of(2026, 6, 12));
+        }
+
+        @Test
+        @DisplayName("방장이 아니면 절사 단위를 바꿀 수 없다")
+        void changeRoundUnit_byNonOwner_throwsException() {
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(2L)).willReturn(Optional.of(otherUser));
+
+            assertThatThrownBy(() -> payRoomService.changeRoundUnit(10L, 2L, 1000))
+                    .isInstanceOf(NotRoomOwnerException.class);
+
+            assertThat(payRoom.getRoundUnit()).isEqualTo(10);   // 그대로
+        }
+
+        @Test
+        @DisplayName("허용되지 않은 절사 단위면 예외가 나고 값은 바뀌지 않는다")
+        void changeRoundUnit_invalidUnit_throwsException() {
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+
+            assertThatThrownBy(() -> payRoomService.changeRoundUnit(10L, 1L, 50))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            assertThat(payRoom.getRoundUnit()).isEqualTo(10);
+        }
+    }
+
+    @Nested
     @DisplayName("멤버 추가 테스트")
     class AddMember {
 

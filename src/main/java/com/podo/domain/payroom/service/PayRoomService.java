@@ -121,6 +121,19 @@ public class PayRoomService {
         return PayRoomResponse.from(payRoom);
     }
 
+    // 정산 화면에서 절사 단위만 바꿀 때 (방장만). 제목·마감일은 그대로 둔다
+    @Transactional
+    public PayRoomResponse changeRoundUnit(Long roomId, Long userId, Integer roundUnit) {
+        PayRoom payRoom = findPayRoomById(roomId);
+        User user = findUserById(userId);
+
+        validateOwner(payRoom, user);
+
+        payRoom.updateInfo(payRoom.getTitle(), payRoom.getDueDate(), roundUnit);
+
+        return PayRoomResponse.from(payRoom);
+    }
+
     @Transactional
     public void addMember(Long roomId, Long ownerId, String newMemberLoginId) {
         PayRoom payRoom = findPayRoomById(roomId);

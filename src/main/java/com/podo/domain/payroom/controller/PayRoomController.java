@@ -98,6 +98,15 @@ public class PayRoomController {
         return "room/settlement";
     }
 
+    // 정산 화면의 절사 옵션 변경 (방장만, 방 설정으로 저장)
+    @PostMapping("/{roomId}/settlement/round-unit")
+    public String changeRoundUnit(@PathVariable Long roomId,
+                                  @RequestParam Integer roundUnit,
+                                  @AuthenticationPrincipal PrincipalUser principal) {
+        payRoomService.changeRoundUnit(roomId, principal.getUserId(), roundUnit);
+        return "redirect:/rooms/" + roomId + "/settlement";
+    }
+
     @PostMapping("/{roomId}/members")
     public String addMember(@PathVariable Long roomId,
                             @Valid @ModelAttribute AddMemberRequest request,

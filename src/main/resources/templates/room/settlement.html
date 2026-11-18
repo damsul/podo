@@ -23,15 +23,18 @@
   </div>
 
   <div class="payment-group">
-    <div class="round-option-row">
+    <!-- 절사 단위는 방 설정: 방장이 바꾸면 저장 후 다시 계산된다 (멤버는 보기만 가능) -->
+    <form class="round-option-row" method="post"
+          th:action="@{/rooms/{roomId}/settlement/round-unit(roomId=${settlement.roomId})}">
       <span class="round-label">절사 옵션</span>
-      <select id="roundSelect" class="round-select">
+      <select id="roundSelect" name="roundUnit" class="round-select" th:disabled="${!settlement.roomOwner}">
         <option value="1" th:selected="${settlement.roundUnit == 1}">없음 (1원)</option>
         <option value="10" th:selected="${settlement.roundUnit == 10}">10원</option>
         <option value="100" th:selected="${settlement.roundUnit == 100}">100원</option>
         <option value="1000" th:selected="${settlement.roundUnit == 1000}">1,000원</option>
       </select>
-    </div>
+      <span th:unless="${settlement.roomOwner}" class="round-hint">방장만 변경할 수 있어요</span>
+    </form>
   </div>
 
   <div class="payment-group">
@@ -126,21 +129,9 @@
 
 
 <script>
-  document.getElementById('roundSelect').addEventListener('change', () => {
-    const unit = Number(document.getElementById('roundSelect').value);
-    document.querySelectorAll('.net-row').forEach(row => {
-      const amountEl = row.querySelector('.net-amount');
-      if (!amountEl) return;   // '주고받을 돈 없음' 줄은 건너뜀
-      const raw = Number(row.dataset.raw);
-      const rounded = Math.floor(raw / unit) * unit;
-      amountEl.textContent = rounded.toLocaleString() + '원';
-    });
-
-    document.querySelectorAll('.detail-amount').forEach(el => {
-      const raw = Number(el.dataset.raw);
-      const rounded = Math.floor(raw / unit) * unit;
-      el.textContent = rounded.toLocaleString() + '원';
-    });
+  // 절사 옵션을 바꾸면 바로 저장 (서버가 새 단위로 다시 계산하고 공유 문구도 맞춰짐)
+  document.getElementById('roundSelect').addEventListener('change', (e) => {
+    e.target.form.submit();
   });
 
   document.getElementById('detailButton').addEventListener('click', () => {
