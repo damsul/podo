@@ -3,6 +3,8 @@ package com.podo.domain.payroom.service;
 import com.podo.domain.payroom.dto.request.PaymentCreateRequest;
 import com.podo.domain.payroom.dto.request.PaymentUpdateRequest;
 import com.podo.domain.payroom.dto.response.PaymentResponse;
+import com.podo.domain.payroom.dto.response.SettlementResponse;
+import com.podo.domain.payroom.dto.response.SettlementResponse.NetTransferInfo;
 import com.podo.domain.payroom.entity.PayRoom;
 import com.podo.domain.payroom.entity.Payment;
 import com.podo.domain.payroom.entity.PaymentParticipant;
@@ -47,6 +49,7 @@ class PaymentServiceTest {
     @Mock private PayRoomRepository payRoomRepository;
     @Mock private RoomMemberRepository roomMemberRepository;
     @Mock private UserRepository userRepository;
+    @Mock private SettlementService settlementService;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -372,16 +375,18 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("받는 사람은 자기 결제들로만 이뤄진 묶음을 한 번에 정산할 수 있다")
-        void markGroupAsSettled_byReceiver_success() {
-            Payment payment2 = setId(Payment.class, Payment.builder()
-                    .payRoom(payRoom).payer(member).title("택시").amount(20000).build(), 102L);
-            PaymentParticipant pp1 = participant(500L, payment, member2);
-            PaymentParticipant pp2 = participant(501L, payment2, member2);
+        @DisplayName("묶음 정산: 최종 받는 사람은 상계된 줄(양방향 참여자 포함)을 한 번에 정산할 수 있다")
+        void markGroupAsSettled_byNetReceiver_success() {
+            // member2 → member (장보기), member → member2 (택시)가 상계된 한 줄, 최종 받는 사람 = member
+            Payment taxi = setId(Payment.class, Payment.builder()
+                    .payRoom(payRoom).payer(member2).title("택시").amount(8000).build(), 102L);
+            PaymentParticipant pp1 = participant(500L, payment, member2);   // member2가 member에게
+            PaymentParticipant pp2 = participant(501L, taxi, member);       // member가 member2에게
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
             given(userRepository.findById(2L)).willReturn(Optional.of(member));
             given(participantRepository.findById(500L)).willReturn(Optional.of(pp1));
             given(participantRepository.findById(501L)).willReturn(Optional.of(pp2));
+            given(settlementService.calculate(10L, 2L)).willReturn(netLines(netLine(true, 500L, 501L)));
 
             paymentService.markGroupAsSettled(10L, List.of(500L, 501L), 2L);
 
@@ -390,22 +395,52 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("묶음에 남이 받을 돈이 섞이면 받는 사람이라도 아무것도 바뀌지 않는다")
-        void markGroupAsSettled_mixedReceiver_changesNothing() {
-            Payment ownersPayment = setId(Payment.class, Payment.builder()
-                    .payRoom(payRoom).payer(owner).title("숙소").amount(100000).build(), 102L);
-            PaymentParticipant mine = participant(500L, payment, member2);          // member가 받을 돈
-            PaymentParticipant notMine = participant(501L, ownersPayment, member2); // 방장이 받을 돈
+        @DisplayName("묶음 정산: 최종 보내는 사람은 그 줄을 정산할 수 없다")
+        void markGroupAsSettled_byNetSender_throwsException() {
+            Payment taxi = setId(Payment.class, Payment.builder()
+                    .payRoom(payRoom).payer(member2).title("택시").amount(8000).build(), 102L);
+            PaymentParticipant pp1 = participant(500L, payment, member2);
+            PaymentParticipant pp2 = participant(501L, taxi, member);
             given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
-            given(userRepository.findById(2L)).willReturn(Optional.of(member));
-            given(participantRepository.findById(500L)).willReturn(Optional.of(mine));
-            given(participantRepository.findById(501L)).willReturn(Optional.of(notMine));
+            given(userRepository.findById(3L)).willReturn(Optional.of(member2));
+            given(participantRepository.findById(500L)).willReturn(Optional.of(pp1));
+            given(participantRepository.findById(501L)).willReturn(Optional.of(pp2));
+            given(settlementService.calculate(10L, 3L)).willReturn(netLines(netLine(false, 500L, 501L)));
 
-            assertThatThrownBy(() -> paymentService.markGroupAsSettled(10L, List.of(500L, 501L), 2L))
+            assertThatThrownBy(() -> paymentService.markGroupAsSettled(10L, List.of(500L, 501L), 3L))
                     .isInstanceOf(NotSettlementManagerException.class);
 
-            assertThat(mine.isSettled()).isFalse();
-            assertThat(notMine.isSettled()).isFalse();
+            assertThat(pp1.isSettled()).isFalse();
+            assertThat(pp2.isSettled()).isFalse();
+        }
+
+        @Test
+        @DisplayName("묶음 정산: 줄의 일부만 골라 보내면 거부된다 (받는 사람이라도)")
+        void markGroupAsSettled_partialLine_throwsException() {
+            PaymentParticipant pp1 = participant(500L, payment, member2);
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(2L)).willReturn(Optional.of(member));
+            given(participantRepository.findById(500L)).willReturn(Optional.of(pp1));
+            given(settlementService.calculate(10L, 2L)).willReturn(netLines(netLine(true, 500L, 501L)));
+
+            assertThatThrownBy(() -> paymentService.markGroupAsSettled(10L, List.of(500L), 2L))
+                    .isInstanceOf(NotSettlementManagerException.class);
+
+            assertThat(pp1.isSettled()).isFalse();
+        }
+
+        @Test
+        @DisplayName("묶음 정산: 방장은 정산 계산 없이 바로 처리한다")
+        void markGroupAsSettled_byOwner_skipsCalculation() {
+            PaymentParticipant pp1 = participant(500L, payment, member2);
+            given(payRoomRepository.findById(10L)).willReturn(Optional.of(payRoom));
+            given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+            given(participantRepository.findById(500L)).willReturn(Optional.of(pp1));
+
+            paymentService.markGroupAsSettled(10L, List.of(500L), 1L);
+
+            assertThat(pp1.isSettled()).isTrue();
+            verify(settlementService, never()).calculate(any(), any());
         }
 
         @Test
@@ -427,6 +462,14 @@ class PaymentServiceTest {
     }
 
     // === 테스트 헬퍼 === //
+
+    private SettlementResponse netLines(NetTransferInfo... lines) {
+        return SettlementResponse.builder().netTransfers(List.of(lines)).build();
+    }
+
+    private NetTransferInfo netLine(boolean canSettle, Long... participantIds) {
+        return NetTransferInfo.builder().canSettle(canSettle).participantIds(List.of(participantIds)).build();
+    }
 
     private PaymentParticipant participant(Long id, Payment payment, User user) {
         return setId(PaymentParticipant.class,

@@ -214,6 +214,104 @@ class SettlementServiceTest {
     }
 
     @Nested
+    @DisplayName("상계 (두 사람 사이 차액만)")
+    class Offset {
+
+        @Test
+        @DisplayName("서로 보낼 돈이 있으면 차액만 한 줄로 남는다 (16,000 - 6,000 같은 계산)")
+        void oppositeDirections_areOffset() {
+            Payment p1 = payment(100L, gyounghwan, "장보기", 20000);   // 민욱 → 경환 10,000
+            Payment p2 = payment(101L, minwook, "택시", 8000);         // 경환 → 민욱 4,000
+            givenSettlement(Map.of(
+                    p1, participants(p1, gyounghwan, minwook),
+                    p2, participants(p2, minwook, gyounghwan)));
+
+            SettlementResponse response = settlementService.calculate(ROOM_ID, OWNER_ID);
+
+            assertThat(response.getTransfers()).hasSize(2);        // 결제별 내역은 그대로
+            assertThat(response.getNetTransfers()).hasSize(1);     // 최종 정산은 한 줄
+            NetTransferInfo net = response.getNetTransfers().get(0);
+            assertThat(net.getFromUserName()).isEqualTo("민욱");
+            assertThat(net.getToUserName()).isEqualTo("경환");
+            assertThat(net.getAmount()).isEqualTo(6000);
+            assertThat(net.getParticipantIds()).hasSize(2);        // 양방향 참여자 모두 포함
+            assertThat(net.isZeroBalance()).isFalse();
+        }
+
+        @Test
+        @DisplayName("보낼 돈이 같으면 '주고받을 돈 없음' 줄이 되고 체크할 수 없다")
+        void sameAmount_isZeroBalance() {
+            Payment p1 = payment(100L, gyounghwan, "커피", 10000);   // 민욱 → 경환 5,000
+            Payment p2 = payment(101L, minwook, "간식", 10000);      // 경환 → 민욱 5,000
+            givenSettlement(Map.of(
+                    p1, participants(p1, gyounghwan, minwook),
+                    p2, participants(p2, minwook, gyounghwan)));
+
+            NetTransferInfo net = settlementService.calculate(ROOM_ID, OWNER_ID).getNetTransfers().get(0);
+
+            assertThat(net.isZeroBalance()).isTrue();
+            assertThat(net.getAmount()).isZero();
+            assertThat(net.isCanSettle()).isFalse();   // 방장이어도 버튼 없음
+        }
+
+        @Test
+        @DisplayName("상계는 원래 금액끼리 빼고 마지막에 한 번만 절사한다")
+        void offsetBeforeRounding() {
+            payRoom = room(1000);
+            Payment p1 = payment(100L, gyounghwan, "장보기", 10000);   // 민욱 → 경환 5,000
+            Payment p2 = payment(101L, minwook, "커피", 3000);         // 경환 → 민욱 1,500
+            givenSettlement(Map.of(
+                    p1, participants(p1, gyounghwan, minwook),
+                    p2, participants(p2, minwook, gyounghwan)));
+
+            NetTransferInfo net = settlementService.calculate(ROOM_ID, OWNER_ID).getNetTransfers().get(0);
+
+            // 결제별로 절사하면 5,000 - 1,000 = 4,000원이지만, 원래 금액 3,500원을 절사하면 3,000원
+            assertThat(net.getRawAmount()).isEqualTo(3500);
+            assertThat(net.getAmount()).isEqualTo(3000);
+        }
+
+        @Test
+        @DisplayName("방장이 아니면 상계 후 '최종 받는 사람'만 그 줄을 체크할 수 있다")
+        void canSettle_onlyNetReceiver() {
+            Payment p1 = payment(100L, juhwang, "숙소", 20000);   // 민욱 → 주황 10,000
+            Payment p2 = payment(101L, minwook, "택시", 4000);    // 주황 → 민욱 2,000
+            Map<Payment, List<PaymentParticipant>> data = Map.of(
+                    p1, participants(p1, juhwang, minwook),
+                    p2, participants(p2, minwook, juhwang));
+            givenSettlement(data, juhwang.getId(), minwook.getId());
+
+            NetTransferInfo byReceiver = settlementService.calculate(ROOM_ID, juhwang.getId()).getNetTransfers().get(0);
+            NetTransferInfo bySender = settlementService.calculate(ROOM_ID, minwook.getId()).getNetTransfers().get(0);
+
+            assertThat(byReceiver.getToUserName()).isEqualTo("주황");
+            assertThat(byReceiver.getAmount()).isEqualTo(8000);
+            assertThat(byReceiver.isCanSettle()).isTrue();
+            assertThat(bySender.isCanSettle()).isFalse();
+        }
+
+        @Test
+        @DisplayName("공유 문구에서 '주고받을 돈 없음' 줄은 빠진다")
+        void shareText_skipsZeroBalance() {
+            Payment p1 = payment(100L, gyounghwan, "커피", 10000);
+            Payment p2 = payment(101L, minwook, "간식", 10000);
+            Payment p3 = payment(102L, gyounghwan, "택시", 20000);   // 주황 → 경환 10,000
+            givenSettlement(Map.of(
+                    p1, participants(p1, gyounghwan, minwook),
+                    p2, participants(p2, minwook, gyounghwan),
+                    p3, participants(p3, gyounghwan, juhwang)));
+            SettlementResponse settlement = settlementService.calculate(ROOM_ID, OWNER_ID);
+
+            String text = settlementService.buildShareText(settlement, List.of());
+
+            assertThat(text)
+                    .contains("주황님은 경환님에게 10,000원 입금 부탁드립니다.")
+                    .doesNotContain("민욱님은")
+                    .doesNotContain("경환님은");
+        }
+    }
+
+    @Nested
     @DisplayName("권한·예외")
     class Exceptions {
 
@@ -261,8 +359,13 @@ class SettlementServiceTest {
 
     // === 테스트 헬퍼 === //
 
-    /** 방 조회 + 멤버 확인 + 결제 목록 + 참여자 묶음을 한 번에 준비 */
+    /** 방 조회 + 멤버 확인 + 결제 목록 + 참여자 묶음을 한 번에 준비 (방장이 조회) */
     private void givenSettlement(Map<Payment, List<PaymentParticipant>> data) {
+        givenSettlement(data, OWNER_ID);
+    }
+
+    /** 조회하는 사용자를 지정해서 준비 (각 사용자를 방 멤버로 응답) */
+    private void givenSettlement(Map<Payment, List<PaymentParticipant>> data, Long... viewerIds) {
         List<Payment> payments = data.keySet().stream()
                 .sorted((a, b) -> a.getId().compareTo(b.getId()))
                 .toList();
@@ -270,7 +373,9 @@ class SettlementServiceTest {
         data.forEach((p, pps) -> grouped.put(p.getId(), pps));
 
         given(payRoomRepository.findById(ROOM_ID)).willReturn(Optional.of(payRoom));
-        given(roomMemberRepository.existsMember(ROOM_ID, OWNER_ID)).willReturn(true);
+        for (Long viewerId : viewerIds) {
+            given(roomMemberRepository.existsMember(ROOM_ID, viewerId)).willReturn(true);
+        }
         given(paymentRepository.findAllByPayRoomWithPayer(payRoom)).willReturn(payments);
         given(participantRepository.findGroupedByPayment(anyList())).willReturn(grouped);
     }

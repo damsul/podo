@@ -131,6 +131,27 @@ class SettlementServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("상계: 실제 시나리오에서 경환·소현 사이는 차액 한 줄만 남는다")
+    void calculate_offsetInRealScenario() {
+        pay(gyounghwan, "장보기", 80000, gyounghwan, minwook, juhwang, youngjun, sohyun);   // 소현 → 경환 16,000
+        pay(sohyun, "야식", 20000, sohyun, gyounghwan, youngjun);                          // 경환 → 소현 6,666
+
+        SettlementResponse response = settlementService.calculate(roomId, gyounghwan.getId());
+
+        // 결제별 6줄 → 최종 정산 5줄 (경환·소현 양방향이 한 줄로)
+        assertThat(response.getTransfers()).hasSize(6);
+        assertThat(response.getNetTransfers()).hasSize(5);
+
+        NetTransferInfo sohyunToGyounghwan = response.getNetTransfers().stream()
+                .filter(n -> n.getFromUserName().equals("소현"))
+                .findFirst().orElseThrow();
+        assertThat(sohyunToGyounghwan.getToUserName()).isEqualTo("경환");
+        assertThat(sohyunToGyounghwan.getRawAmount()).isEqualTo(16000 - 6666);   // 9,334
+        assertThat(sohyunToGyounghwan.getAmount()).isEqualTo(9330);              // 10원 절사
+        assertThat(sohyunToGyounghwan.getParticipantIds()).hasSize(2);
+    }
+
+    @Test
     @DisplayName("방장이 정산 완료한 항목은 다시 계산해도 settled=true로 나온다")
     void calculate_reflectsSettledStatus() {
         pay(gyounghwan, "장보기", 80000, gyounghwan, minwook, juhwang);

@@ -45,5 +45,6 @@ public class SettlementResponse {
         private List<Long> participantIds;
         private boolean settled;
         private boolean canSettle;
+        private boolean zeroBalance;
     }
 }

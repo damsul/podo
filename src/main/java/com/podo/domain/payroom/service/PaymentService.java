@@ -18,8 +18,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ public class PaymentService {
     private final PayRoomRepository payRoomRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final UserRepository userRepository;
+    private final SettlementService settlementService;   // 묶음 정산 권한 확인용 (화면의 최종 정산 줄과 같은 계산)
 
     @Transactional
     public PaymentResponse create(Long roomId, Long userId, PaymentCreateRequest request) {
@@ -127,20 +130,47 @@ public class PaymentService {
                 .forEach(PaymentParticipant::markAsUnsettled);
     }
 
+    // 묶음 정산 = 화면 "최종 정산"의 한 줄 (두 사람 사이 상계된 줄, 양방향 참여자 포함)
     @Transactional
     public void markGroupAsSettled(Long roomId, List<Long> participantIds, Long userId) {
-        findParticipantsForSettler(roomId, participantIds, userId)
+        findParticipantsForNetLine(roomId, participantIds, userId)
                 .forEach(PaymentParticipant::markAsSettled);
     }
 
     @Transactional
     public void markGroupAsUnsettled(Long roomId, List<Long> participantIds, Long userId) {
-        findParticipantsForSettler(roomId, participantIds, userId)
+        findParticipantsForNetLine(roomId, participantIds, userId)
                 .forEach(PaymentParticipant::markAsUnsettled);
     }
 
-    // 1) 참여자를 "전부" 찾아서 URL의 방 참여자인지 확인 (아니면 404)
-    // 2) 방장이면 통과, 아니면 모든 참여자가 "내가 결제한(돈을 받을)" 항목이어야 통과 (아니면 403)
+    // 1) 참여자를 전부 찾아서 URL의 방 참여자인지 확인 (아니면 404)
+    // 2) 방장이면 통과
+    // 3) 방장이 아니면: 요청한 묶음이 "최종 정산의 한 줄과 정확히 같고" 그 줄을 체크할 수 있어야 통과 (아니면 403)
+    //    - 상계된 줄에는 내가 보낸 쪽 참여자도 섞여 있으므로, 참여자마다 결제자를 보는 방식으로는 판단할 수 없다
+    //    - 화면과 같은 계산(SettlementService)을 다시 돌려 "최종 받는 사람"인지 확인한다
+    //    - 묶음 일부만 골라 보내는 요청도 줄과 일치하지 않으므로 거부된다
+    private List<PaymentParticipant> findParticipantsForNetLine(Long roomId, List<Long> participantIds, Long userId) {
+        PayRoom payRoom = findPayRoomById(roomId);
+        User currentUser = findUserById(userId);
+
+        List<PaymentParticipant> participants = participantIds.stream()
+                .map(id -> findParticipantInRoom(roomId, id))
+                .toList();
+
+        if (payRoom.isOwner(currentUser)) {
+            return participants;
+        }
+
+        Set<Long> requested = new HashSet<>(participantIds);
+        boolean allowed = settlementService.calculate(roomId, userId).getNetTransfers().stream()
+                .anyMatch(net -> net.isCanSettle() && new HashSet<>(net.getParticipantIds()).equals(requested));
+        if (!allowed) {
+            throw new NotSettlementManagerException();
+        }
+        return participants;
+    }
+
+    // 개별 정산(결제별 한 건): 방장 또는 그 결제의 결제자(받는 사람)만 (아니면 403)
     // 하나라도 걸리면 아무것도 바꾸지 않는다 (일부만 바뀌는 상황 방지)
     private List<PaymentParticipant> findParticipantsForSettler(Long roomId, List<Long> participantIds, Long userId) {
         PayRoom payRoom = findPayRoomById(roomId);

@@ -202,6 +202,44 @@ class PaymentServiceIntegrationTest {
         }
 
         @Test
+        @DisplayName("상계된 줄: 최종 받는 사람이 양방향 참여자를 한 번에 정산할 수 있다")
+        void settleGroup_offsetLine_byNetReceiver() {
+            // member1 결제 20,000 (member1, member2) → member2가 member1에게 10,000
+            // member2 결제  8,000 (member2, member1) → member1이 member2에게  4,000
+            // 상계: member2 → member1 6,000 (최종 받는 사람 = member1)
+            Long toMember1 = firstOtherParticipantId(createPayment(payRoom, member1, 20000, member1, member2));
+            Long toMember2 = firstOtherParticipantId(createPayment(payRoom, member2, 8000, member2, member1));
+
+            paymentService.markGroupAsSettled(payRoom.getId(), List.of(toMember1, toMember2), member1.getId());
+            flushAndClear();
+
+            assertThat(participantRepository.findById(toMember1).orElseThrow().isSettled()).isTrue();
+            assertThat(participantRepository.findById(toMember2).orElseThrow().isSettled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("상계된 줄: 최종 보내는 사람은 정산할 수 없다")
+        void settleGroup_offsetLine_byNetSender_throwsException() {
+            Long toMember1 = firstOtherParticipantId(createPayment(payRoom, member1, 20000, member1, member2));
+            Long toMember2 = firstOtherParticipantId(createPayment(payRoom, member2, 8000, member2, member1));
+
+            assertThatThrownBy(() -> paymentService.markGroupAsSettled(
+                    payRoom.getId(), List.of(toMember1, toMember2), member2.getId()))
+                    .isInstanceOf(NotSettlementManagerException.class);
+        }
+
+        @Test
+        @DisplayName("상계된 줄: 일부만 골라 보내면 받는 사람이라도 거부된다")
+        void settleGroup_partialLine_throwsException() {
+            Long toMember1 = firstOtherParticipantId(createPayment(payRoom, member1, 20000, member1, member2));
+            firstOtherParticipantId(createPayment(payRoom, member2, 8000, member2, member1));
+
+            assertThatThrownBy(() -> paymentService.markGroupAsSettled(
+                    payRoom.getId(), List.of(toMember1), member1.getId()))
+                    .isInstanceOf(NotSettlementManagerException.class);
+        }
+
+        @Test
         @DisplayName("묶음 정산에 다른 방 참여자가 섞이면 아무것도 바뀌지 않는다")
         void settleGroup_mixedRoom_changesNothing() {
             Long myPpId = firstOtherParticipantId(createPayment(payRoom, owner, 80000, owner, member1));

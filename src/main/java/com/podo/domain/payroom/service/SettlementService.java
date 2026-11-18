@@ -51,7 +51,7 @@ public class SettlementService {
                 participantRepository.findGroupedByPayment(payments);
 
         List<TransferInfo> transfers = new ArrayList<>();
-        Map<String, NetAccumulator> netMap = new LinkedHashMap<>();
+        Map<String, PairAccumulator> pairMap = new LinkedHashMap<>();
         int totalAmount = 0;
 
         for (Payment payment : payments) {
@@ -79,24 +79,14 @@ public class SettlementService {
                         .canSettle(isOwner || payer.getId().equals(userId))   // 방장 또는 받는 사람
                         .build());
 
-                String key = pu.getId() + "->" + payer.getId();
-                NetAccumulator acc = netMap.computeIfAbsent(key, k -> new NetAccumulator(pu, payer));
-                acc.rawTotal += rawPerPerson;
-                acc.participantIds.add(participant.getId());
-                acc.allSettled = acc.allSettled && participant.isSettled();
+                // 방향과 상관없이 "두 사람" 단위로 모은다 (A→B, B→A가 같은 묶음)
+                PairAccumulator acc = pairMap.computeIfAbsent(pairKey(pu, payer), k -> new PairAccumulator(pu, payer));
+                acc.add(pu, rawPerPerson, participant);
             }
         }
 
-        List<NetTransferInfo> netTransfers = netMap.values().stream()
-                .map(acc -> NetTransferInfo.builder()
-                        .fromUserId(acc.fromUser.getId()).fromUserName(acc.fromUser.getName())
-                        .toUserId(acc.toUser.getId()).toUserName(acc.toUser.getName())
-                        .rawAmount(acc.rawTotal)
-                        .amount((acc.rawTotal / roundUnit) * roundUnit)
-                        .settled(acc.allSettled)
-                        .canSettle(isOwner || acc.toUser.getId().equals(userId))   // 방장 또는 받는 사람
-                        .participantIds(acc.participantIds)
-                        .build())
+        List<NetTransferInfo> netTransfers = pairMap.values().stream()
+                .map(acc -> acc.toNetTransfer(roundUnit, isOwner, userId))
                 .toList();
 
         return SettlementResponse.builder()
@@ -122,6 +112,7 @@ public class SettlementService {
         StringBuilder sb = new StringBuilder();
         sb.append("'").append(settlement.getRoomTitle()).append("' 모임 정산 내용입니다.\n\n[정산내용]\n");
         for (NetTransferInfo t : settlement.getNetTransfers()) {
+            if (t.isZeroBalance()) continue;   // 주고받을 돈이 없는 사이는 문구에서 제외
             sb.append(t.getFromUserName()).append("님은 ").append(t.getToUserName())
                     .append("님에게 ").append(String.format("%,d", t.getAmount())).append("원 입금 부탁드립니다.\n");
         }
@@ -147,16 +138,59 @@ public class SettlementService {
         }
     }
 
-    private static class NetAccumulator {
-        User fromUser;
-        User toUser;
-        int rawTotal = 0;
-        boolean allSettled = true;
-        List<Long> participantIds = new ArrayList<>();
+    // 두 사람을 id 순서로 묶은 키: (2,5)와 (5,2)가 같은 키가 된다
+    private static String pairKey(User a, User b) {
+        long low = Math.min(a.getId(), b.getId());
+        long high = Math.max(a.getId(), b.getId());
+        return low + "-" + high;
+    }
 
-        public NetAccumulator(User fromUser, User toUser) {
-            this.fromUser = fromUser;
-            this.toUser = toUser;
+    /**
+     * 두 사람 사이의 송금을 양방향 모두 모은 뒤 차액만 남긴다 (상계)
+     * - 금액은 절사 전 금액(raw)끼리 빼고, 마지막에 한 번만 절사한다
+     * - 묶음에는 양방향 참여자 id가 모두 들어간다 (정산 완료 시 함께 처리)
+     */
+    private static class PairAccumulator {
+        private final User low;    // id가 작은 사람
+        private final User high;   // id가 큰 사람
+        private int lowOwesHigh = 0;
+        private int highOwesLow = 0;
+        private boolean allSettled = true;
+        private final List<Long> participantIds = new ArrayList<>();
+
+        PairAccumulator(User a, User b) {
+            this.low = a.getId() < b.getId() ? a : b;
+            this.high = a.getId() < b.getId() ? b : a;
+        }
+
+        void add(User from, int raw, PaymentParticipant participant) {
+            if (from.getId().equals(low.getId())) {
+                lowOwesHigh += raw;
+            } else {
+                highOwesLow += raw;
+            }
+            participantIds.add(participant.getId());
+            allSettled = allSettled && participant.isSettled();
+        }
+
+        NetTransferInfo toNetTransfer(int roundUnit, boolean isOwner, Long userId) {
+            int diff = lowOwesHigh - highOwesLow;
+            User from = diff >= 0 ? low : high;
+            User to = diff >= 0 ? high : low;
+            int raw = Math.abs(diff);
+            int amount = (raw / roundUnit) * roundUnit;
+            boolean zeroBalance = amount == 0;   // 상계 후 보낼 돈이 없음
+
+            return NetTransferInfo.builder()
+                    .fromUserId(from.getId()).fromUserName(from.getName())
+                    .toUserId(to.getId()).toUserName(to.getName())
+                    .rawAmount(raw)
+                    .amount(amount)
+                    .settled(allSettled)
+                    .zeroBalance(zeroBalance)
+                    .canSettle(!zeroBalance && (isOwner || to.getId().equals(userId)))   // 방장 또는 최종 받는 사람
+                    .participantIds(participantIds)
+                    .build();
         }
     }
 }
